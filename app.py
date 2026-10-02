@@ -36,7 +36,7 @@ ACCENT_BUCKET = os.environ.get("ACCENT_BUCKET")
 ACCENT_PROGRESS_FILE = os.environ.get("ACCENT_PROGRESS_FILE")  # local development: a copy of progress.json
 ACCENT_URL = os.environ.get("ACCENT_URL", "")
 # what counts as "done" for each habit; editable on the Habits tab (stored in data/settings.json)
-DEFAULT_HABITS = {"wakeBy": "07:15", "deepMin": 45, "asleepMin": 420, "gymDays": 4, "accentMin": 15}
+DEFAULT_HABITS = {"wakeBy": "07:15", "gymDays": 4, "accentMin": 15}
 UPLOAD_RE = re.compile(r"^uploads/export-\d{8}-\d{6}\.zip$")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", handlers=[logging.StreamHandler(sys.stdout)])
@@ -130,8 +130,18 @@ def accent_session_seconds(sentence_id):
     return 10 * dur + practice + 10 * (dur + (dur + 1)) + 30 * dur + practice
 
 
-def accent_minutes():
-    """Estimated accent practice minutes per day (Europe/London), from Accent Coach's progress.json."""
+ACCENT_DAY_START = timedelta(hours=7)  # a practice day runs 07:00–07:00, so late-night practice counts for that evening
+
+
+def practice_day(dt):
+    return (dt - ACCENT_DAY_START).date()
+
+
+def speech_practices():
+    """Practices from Accent Coach's progress.json, oldest first, as [time ms, estimated seconds, sentence index, practice day, hour].
+
+    A practice day runs 07:00–07:00 Europe/London; the hour is local. None when there's no progress file.
+    """
     raw = None
     try:
         if ACCENT_BUCKET:
@@ -145,19 +155,29 @@ def accent_minutes():
         log.exception("couldn't read accent progress")
     if not raw:
         return None
-    minutes = defaultdict(float)
-    for sid, stamps in (json.loads(raw).get("history") or {}).items():
+    rows = []
+    for i, (sid, stamps) in enumerate((json.loads(raw).get("history") or {}).items()):
         try:
-            secs = accent_session_seconds(sid)
+            secs = round(accent_session_seconds(sid), 1)
         except (ValueError, TypeError):
             continue
         for ts in stamps:
-            minutes[datetime.fromtimestamp(ts / 1000, TZ).date().isoformat()] += secs / 60
+            local = datetime.fromtimestamp(ts / 1000, TZ)
+            rows.append([int(ts), secs, i, practice_day(local).isoformat(), local.hour])
+    return sorted(rows)
+
+
+def daily_minutes(practices):
+    """Estimated practice minutes per practice day, for the habit."""
+    minutes = defaultdict(float)
+    for _, secs, _, day, _ in practices:
+        minutes[day] += secs / 60
     return {d: round(m, 1) for d, m in sorted(minutes.items())}
 
 
 def load_habits():
-    return {**DEFAULT_HABITS, **read_json("data/settings.json", {}).get("habits", {})}
+    saved = read_json("data/settings.json", {}).get("habits", {})
+    return {k: saved.get(k, v) for k, v in DEFAULT_HABITS.items()}  # ignores targets of removed habits
 
 
 @app.get("/")
@@ -166,10 +186,11 @@ def index():
     if not payload:
         return render_template("empty.html")
     payload["events"] = []  # events come from data/events.json so edits don't need re-processing
+    speech = speech_practices()
     config = {
         "webapp": True, "events": load_events(), "meta": read_json("data/meta.json", {}),
-        "habits": load_habits(), "accent": accent_minutes(), "accentUrl": ACCENT_URL,
-        "today": datetime.now(TZ).date().isoformat(),
+        "habits": load_habits(), "accent": daily_minutes(speech) if speech is not None else None, "speech": speech, "accentUrl": ACCENT_URL,
+        "today": datetime.now(TZ).date().isoformat(), "accentToday": practice_day(datetime.now(TZ)).isoformat(),
     }
     return render_template("index.html", data=payload, config=config)
 
@@ -245,7 +266,7 @@ def settings():
     habits = load_habits()
     if re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", str(given.get("wakeBy", ""))):
         habits["wakeBy"] = given["wakeBy"]
-    for key, lo, hi in (("deepMin", 0, 300), ("asleepMin", 0, 900), ("gymDays", 1, 7), ("accentMin", 1, 240)):
+    for key, lo, hi in (("gymDays", 1, 7), ("accentMin", 1, 240)):
         try:
             if key in given:
                 habits[key] = max(lo, min(hi, int(given[key])))

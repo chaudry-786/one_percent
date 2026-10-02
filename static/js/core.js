@@ -65,11 +65,13 @@ window.OP = (() => {
     light: { deep: "#2a78d6", core: "#1baf7a", rem: "#4a3aa7", unspecified: "#898781", awake: "#eb6834", total: "#eda100", awakeN: "#eb6834",
       eff: "#e87ba4", bed: "#e87ba4", wake: "#e87ba4", hrv: "#e87ba4", rhr: "#e34948", walkHr: "#eb6834",
       strength: "#2a78d6", running: "#eb6834", cardio: "#1baf7a", walking: "#eda100",
-      ink: "#0f172a", ink2: "#475569", muted: "#94a3b8", grid: "#e2e8f0", axis: "#cbd5e1", surface: "#ffffff", record: "#b7791f", accent: "#2563eb" },
+      ink: "#0f172a", ink2: "#475569", muted: "#94a3b8", grid: "#e2e8f0", axis: "#cbd5e1", surface: "#ffffff", record: "#b7791f", accent: "#2563eb",
+      speech: "#7c3aed", speechNew: "#7c3aed", speechRepeat: "#c4b5fd", morning: "#eda100" },
     dark: { deep: "#3987e5", core: "#199e70", rem: "#9085e9", unspecified: "#898781", awake: "#d95926", total: "#c98500", awakeN: "#d95926",
       eff: "#d55181", bed: "#d55181", wake: "#d55181", hrv: "#d55181", rhr: "#e66767", walkHr: "#d95926",
       strength: "#3987e5", running: "#d95926", cardio: "#199e70", walking: "#c98500",
-      ink: "#f1f5f9", ink2: "#cbd5e1", muted: "#64748b", grid: "#1e293b", axis: "#334155", surface: "#0f172a", record: "#f2b705", accent: "#3b82f6" },
+      ink: "#f1f5f9", ink2: "#cbd5e1", muted: "#64748b", grid: "#1e293b", axis: "#334155", surface: "#0f172a", record: "#f2b705", accent: "#3b82f6",
+      speech: "#9d7cf0", speechNew: "#9d7cf0", speechRepeat: "#4c3d8f", morning: "#c98500" },
   };
   const hex = k => HEX[isDark() ? "dark" : "light"][k] || HEX.light.accent;
 
@@ -175,6 +177,7 @@ window.OP = (() => {
     return { clock: clock(v), dur: hm(v), min: `${Math.round(v)}m`, count: `${+v.toFixed(1)}` }[unit] ?? `${Math.round(v)}`;
   }
 
+  const TONES = { good: "#10b981", warn: "#f59e0b", bad: "#f43f5e" }; // optional per-bar meaning: hit / partly / missed
   // Mini chart for glance cards, as HTML + SVG (Alpine can't loop inside <svg>).
   // c: {kind: "line"|"bars", unit, points: [{v, avg?, text, current?}], ref, refText, from, to, avgLine?}; pick: highlighted index or null (= latest)
   function mini(c, pick) {
@@ -198,7 +201,7 @@ window.OP = (() => {
         const h = Math.max(1.5, H - Y(p.v || 0)), x = X(i) - bw / 2;
         svg += p.current
           ? `<rect x="${x}" y="${H - h}" width="${bw}" height="${h}" fill="currentColor" fill-opacity="${i === sel ? 0.35 : 0.15}" stroke="currentColor" stroke-dasharray="3 2" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`
-          : `<rect x="${x}" y="${H - h}" width="${bw}" height="${h}" rx="1" fill="currentColor" opacity="${i === sel ? 1 : 0.45}"/>`;
+          : `<rect x="${x}" y="${H - h}" width="${bw}" height="${h}" rx="1" fill="${TONES[p.tone] || "currentColor"}" opacity="${i === sel ? 1 : p.tone ? 0.75 : 0.45}"/>`;
       });
     } else if (c.avgLine) {
       c.points.forEach((p, i) => { if (p.v != null) svg += dot(X(i), Y(p.v), 4, 'opacity="0.35"'); });
@@ -210,11 +213,11 @@ window.OP = (() => {
     // highlighted point + its value
     const sp = c.points[sel], sv = c.avgLine ? sp?.avg : sp?.v;
     let tag = "";
-    if (sv != null) {
-      const fx = X(sel) / W, ty = bars ? H - Math.max(1.5, H - Y(sv)) : Y(sv);
-      if (!bars) svg += dot(X(sel), Y(sv), 9, 'class="stroke-white dark:stroke-slate-900"') + dot(X(sel), Y(sv), 6.5);
+    if (sv != null && !bars) { // bar charts skip the value tag: it covers neighbouring bars (the label line above shows a tapped bar)
+      const fx = X(sel) / W, ty = Y(sv);
+      svg += dot(X(sel), Y(sv), 9, 'class="stroke-white dark:stroke-slate-900"') + dot(X(sel), Y(sv), 6.5);
       const shift = fx > 0.85 ? "-100%" : fx < 0.15 ? "0%" : "-50%";
-      tag = `<span class="absolute whitespace-nowrap rounded bg-white/90 px-1 font-semibold text-slate-900 dark:bg-slate-900/90 dark:text-white" style="left:${(fx * 100).toFixed(1)}%;top:${((ty / H) * 100).toFixed(1)}%;transform:translate(${shift},-135%)">${short(sv, c.unit)}${sp.current ? " so far" : ""}</span>`;
+      tag = `<span class="absolute whitespace-nowrap rounded bg-white/90 px-1 font-semibold text-slate-900 dark:bg-slate-900/90 dark:text-white" style="left:${(fx * 100).toFixed(1)}%;top:${((ty / H) * 100).toFixed(1)}%;transform:translate(${shift},-135%)">${short(sv, c.unit)}</span>`;
     }
     const top = bars ? hi : Math.max(...vals), bottom = bars ? 0 : Math.min(...vals);
     return `<div class="relative mb-1 mt-4 h-20 select-none text-[10px] leading-none">

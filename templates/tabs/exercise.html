@@ -1,7 +1,26 @@
-{# Exercise: training time, consistency and mornings at a glance; charts below. #}
+{# Exercise: a status banner (behind / slipping / on track, with a next step), cards for this week, the last 4 weeks and the
+   time since your last workout, then charts. #}
 <section x-show="tab === 'exercise'" class="grid gap-4">
-  <h2 class="eyebrow">At a glance <span class="font-normal normal-case tracking-normal">· walks not counted</span></h2>
+  <div class="rounded-2xl border p-4 sm:p-5"
+       :class="{ behind: 'border-rose-300 bg-rose-50 dark:border-rose-500/40 dark:bg-rose-500/10',
+                 slipping: 'border-amber-300 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-500/10',
+                 ontrack: 'border-emerald-300 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-500/10' }[exStatus.state]">
+    <p class="text-xs font-bold uppercase tracking-wider"
+       :class="{ behind: 'text-rose-600 dark:text-rose-400', slipping: 'text-amber-600 dark:text-amber-400', ontrack: 'text-emerald-600 dark:text-emerald-400' }[exStatus.state]"
+       x-text="{ behind: 'You’ve fallen behind', slipping: 'Slipping', ontrack: 'On track' }[exStatus.state]"></p>
+    <h2 class="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl" x-text="exStatus.title"></h2>
+    <p class="mt-2 text-slate-700 dark:text-slate-200" x-text="exStatus.text"></p>
+    <p x-show="exStatus.stale" class="mt-2 text-xs text-slate-500" x-text="exStatus.stale"></p>
+  </div>
+
+  <h2 class="eyebrow mt-2">At a glance <span class="font-normal normal-case tracking-normal">· walks not counted</span></h2>
   {{ glance("exGlance") }}
+
+  <div class="card">
+    <h3 class="font-semibold">Training days per month</h3>
+    <p class="hint" x-text="`Last 18 months · dashed line: about ${Math.round(targets.gymDays * 365.25 / 12 / 7)} a month (${targets.gymDays} a week) · green hit it, amber half or more, red under half`"></p>
+    <div id="exMonthChart" class="mt-2 h-64"></div>
+  </div>
 
   <h2 class="eyebrow mt-2">Explore</h2>
   <div class="flex flex-wrap items-center gap-2">
@@ -11,19 +30,24 @@
 
   <div class="card">
     <h3 class="font-semibold">Workout days</h3>
-    <p class="hint">Each square is a day; the colour shows how long you trained. Tap for details.</p>
+    <p class="hint">Each square is a day; the colour shows how long you trained. Small red squares mark breaks of a week or more. Tap for details.</p>
     <div id="exCalChart" class="mt-2"></div>
   </div>
-  <div class="grid gap-4 lg:grid-cols-5">
-    <div class="card lg:col-span-3">
-      <h3 class="font-semibold">Training per week</h3>
-      <p class="hint" x-text="exWeeklyHint"></p>
-      <div id="exWeeklyChart" class="mt-2 h-72"></div>
+  <div class="card">
+    <h3 class="font-semibold">Training per week</h3>
+    <p class="hint" x-text="exWeeklyHint"></p>
+    <div id="exWeeklyChart" class="mt-2 h-72"></div>
+  </div>
+  <div class="grid gap-4 lg:grid-cols-2">
+    <div class="card">
+      <h3 class="font-semibold">Which days you train</h3>
+      <p class="hint">Training days by weekday</p>
+      <div id="exDowChart" class="mt-2 h-64"></div>
     </div>
-    <div class="card lg:col-span-2">
+    <div class="card">
       <h3 class="font-semibold">What time you train</h3>
       <p class="hint">Workouts by start hour · morning sessions in amber</p>
-      <div id="exTimeChart" class="mt-2 h-72"></div>
+      <div id="exTimeChart" class="mt-2 h-64"></div>
     </div>
   </div>
 </section>

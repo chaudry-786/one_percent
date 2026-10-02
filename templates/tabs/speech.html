@@ -1,0 +1,42 @@
+{# Speech: practice from Accent Coach. Time this week, the 100-hour milestone and sentences at a glance; charts below. #}
+<section x-show="tab === 'speech'" class="grid gap-4">
+  <template x-if="!OP.speech.has()">
+    <p class="card hint text-center">No speech practice found yet. Practise in Accent Coach and it shows up here.</p>
+  </template>
+  <div class="flex items-center justify-between gap-3">
+    <h2 class="eyebrow">At a glance</h2>
+    <a x-show="speechUrl" :href="speechUrl" target="_blank" rel="noopener" class="text-sm font-semibold text-violet-600 dark:text-violet-400">Practise now →</a>
+  </div>
+  {{ glance("speechGlance") }}
+
+  <h2 class="eyebrow mt-2">Explore</h2>
+  <div class="flex flex-wrap items-center gap-2">{% include "_range.html" %}</div>
+
+  <div class="card">
+    <h3 class="font-semibold">Daily practice</h3>
+    <p class="hint" x-text="speechDailyHint"></p>
+    <div id="speechDailyChart" class="mt-2 h-72"></div>
+  </div>
+  <div class="grid gap-4 lg:grid-cols-2">
+    <div class="card">
+      <h3 class="font-semibold">Sentences per week</h3>
+      <p class="hint">New sentences and repeats · dashed line: 70 a week</p>
+      <div id="speechWeeklyChart" class="mt-2 h-64"></div>
+    </div>
+    <div class="card">
+      <h3 class="font-semibold">Road to <span x-text="speechGlance[1]?.unit.replace('h of ', '') + ' hours'"></span></h3>
+      <p class="hint">All time · dots every 25 h · dotted: where your recent pace gets you</p>
+      <div id="speechRoadChart" class="mt-2 h-64"></div>
+    </div>
+    <div class="card">
+      <h3 class="font-semibold">When you practise</h3>
+      <p class="hint">Practices by hour of the day · mornings in amber</p>
+      <div id="speechHourChart" class="mt-2 h-64"></div>
+    </div>
+    <div class="card">
+      <h3 class="font-semibold">How often you repeat a sentence</h3>
+      <p class="hint">All time · number of sentences practised once, twice, …</p>
+      <div id="speechRepeatChart" class="mt-2 h-64"></div>
+    </div>
+  </div>
+</section>

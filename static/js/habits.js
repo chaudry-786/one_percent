@@ -1,7 +1,7 @@
-// Habits: four habits on fixed targets. Streaks use Atomic Habits' "never miss twice": one miss is forgiven, two end it.
+// Habits: three habits on fixed targets. Streaks use Atomic Habits' "never miss twice": one miss is forgiven, two end it.
 OP.habits = (() => {
   const { nights, workouts, APP, addDays, weekStart, fmtDay, hm, clock, dataEnd, today } = OP;
-  const DEFAULTS = { wakeBy: "07:15", deepMin: 45, asleepMin: 420, gymDays: 4, accentMin: 15 };
+  const DEFAULTS = { wakeBy: "07:15", gymDays: 4, accentMin: 15 };
   const QUOTES = [
     "You do not rise to the level of your goals. You fall to the level of your systems.",
     "Every action you take is a vote for the type of person you wish to become.",
@@ -12,20 +12,18 @@ OP.habits = (() => {
   // Tailwind classes per habit (written out in full so Tailwind keeps them)
   const STYLE = {
     wake: { top: "border-t-amber-500", icon: "bg-amber-500/15", done: "bg-amber-500", text: "text-amber-600 dark:text-amber-400" },
-    sleep: { top: "border-t-violet-500", icon: "bg-violet-500/15", done: "bg-violet-500", text: "text-violet-600 dark:text-violet-400" },
     gym: { top: "border-t-emerald-500", icon: "bg-emerald-500/15", done: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400" },
-    accent: { top: "border-t-orange-500", icon: "bg-orange-500/15", done: "bg-orange-500", text: "text-orange-600 dark:text-orange-400" },
+    accent: { top: "border-t-violet-500", icon: "bg-violet-500/15", done: "bg-violet-500", text: "text-violet-600 dark:text-violet-400" },
   };
   const prettyWorkout = t => ({ TraditionalStrengthTraining: "Strength", FunctionalStrengthTraining: "Functional strength", HighIntensityIntervalTraining: "HIIT" })[t]
     || t.replace(/([a-z])([A-Z])/g, "$1 $2");
 
   function list(t) {
     const [wh, wm] = t.wakeBy.split(":").map(Number);
-    const wake = new Map(), sleep = new Map(), gym = new Map(), accent = new Map();
+    const wake = new Map(), gym = new Map(), accent = new Map();
     for (const n of nights) {
-      const morning = addDays(n.d, 1); // wake-up and sleep count on the morning you wake
+      const morning = addDays(n.d, 1); // a wake-up counts on the morning you wake
       wake.set(morning, { done: n.wake - 720 <= wh * 60 + wm, text: `up at ${clock(n.wake)}` });
-      sleep.set(morning, { done: n.deep >= t.deepMin && n.total >= t.asleepMin, text: `${hm(n.total)} asleep · ${Math.round(n.deep)}m deep` });
     }
     for (const w of workouts) {
       if (w.group === "walking") continue;
@@ -37,10 +35,9 @@ OP.habits = (() => {
     const firstOf = map => [...map.keys()].sort()[0];
     const habits = [
       { id: "wake", name: "Wake up early", icon: "☀️", target: `Up by ${t.wakeBy}`, who: "an early riser", map: wake, gaps: "unknown", asOf: dataEnd, start: firstOf(wake) },
-      { id: "sleep", name: "Sleep well", icon: "🌙", target: `${t.deepMin}m+ deep and ${hm(t.asleepMin)}+ asleep`, who: "someone who sleeps well", map: sleep, gaps: "unknown", asOf: dataEnd, start: firstOf(sleep) },
       { id: "gym", name: "Train", icon: "🏋️", target: `${t.gymDays} days a week · any workout but walks`, who: "an athlete", map: gym, gaps: "miss", asOf: dataEnd, start: firstOf(gym), weekly: t.gymDays },
     ];
-    if (APP.accent) habits.push({ id: "accent", name: "Accent practice", icon: "🗣️", target: `${t.accentMin}+ min a day`, who: "a confident speaker", map: accent, gaps: "miss", asOf: today, start: firstOf(accent), live: true, minTarget: t.accentMin });
+    if (APP.accent) habits.push({ id: "accent", name: "Speech practice", icon: "🗣️", target: `${t.accentMin}+ min a day`, who: "a confident speaker", map: accent, gaps: "miss", asOf: APP.accentToday || today, start: firstOf(accent), live: true, minTarget: t.accentMin });
     return habits.filter(h => h.start);
   }
 
@@ -75,7 +72,7 @@ OP.habits = (() => {
   // one card's worth of data for the template
   function card(h) {
     const st = stats(h), r = h.map.get(h.asOf);
-    const label = h.asOf === today ? "Today" : `Latest · ${fmtDay(h.asOf)}`;
+    const label = h.asOf === today || h.live ? "Today" : `Latest · ${fmtDay(h.asOf)}`;
     let now;
     if (h.weekly) now = { text: `This week · ${st.thisWeek} of ${h.weekly} days`, done: st.thisWeek >= h.weekly };
     else if (h.id === "accent") now = r?.done ? { text: `${label} · ${Math.round(r.min)} min`, done: true }
@@ -87,7 +84,7 @@ OP.habits = (() => {
       const mon = addDays(firstMon, w * 7);
       const cells = Array.from({ length: 7 }, (_, i) => {
         const d = addDays(mon, i), s = status(h, d), rec = h.map.get(d);
-        return { d, s, today: d === today, title: `${fmtDay(d)}${rec ? ": " + rec.text : s === "unknown" ? ": no data" : s === "miss" ? ": not done" : ""}` };
+        return { d, s, today: d === (h.live ? h.asOf : today), title: `${fmtDay(d)}${rec ? ": " + rec.text : s === "unknown" ? ": no data" : s === "miss" ? ": not done" : ""}` };
       });
       const n = st.weeks?.get(mon) || 0;
       return { cells, week: h.weekly && mon <= h.asOf ? { text: `${n}/${h.weekly}`, hit: n >= h.weekly } : null };

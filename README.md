@@ -30,7 +30,7 @@ python3 -m venv venv && venv/bin/pip install -r requirements.txt
 - **Tailwind CSS** for styling (utility classes in the templates; a few shared components such as `.card` and `.btn` in `static/src/app.css`).
 - **Alpine.js** for state and interactivity (`static/js/app.js`): tabs, controls, sheets.
 - **ECharts** for charts and **Day.js** for dates, both from a CDN.
-- The server embeds the data as JSON in the page; there's nothing to fetch after load. The open tab is in the URL (`#sleep`, `#exercise`, `#heart`), so refreshing stays on it; everything else resets on refresh, and the light/dark choice is remembered.
+- The server embeds the data as JSON in the page; there's nothing to fetch after load. The open tab is in the URL (`#sleep`, `#exercise`, `#heart`, `#speech`), so refreshing stays on it; everything else resets on refresh, and the light/dark choice is remembered.
 
 ## What's on the page
 
@@ -38,24 +38,23 @@ Every tab starts with **At a glance** cards: a big number, a plain-language "how
 
 ### Habits
 
-Four habits, each judged against a fixed target. There are no comparisons, just how you're doing:
+Three habits, each judged against a fixed target. There are no comparisons, just how you're doing:
 
 | Habit | Done when | Counted on |
 |---|---|---|
 | Wake up early | up by 07:15 | the morning you wake |
-| Sleep well | 45 min+ deep **and** 7 h+ asleep | the morning you wake |
 | Train | any workout except walks, **4 days a week** | each week (Mon–Sun) |
-| Accent practice | 15+ min of practice, read from Accent Coach's saved history | each day |
+| Speech practice | 15+ min of practice, read from Accent Coach's saved history | each day, 07:00 to 07:00 (late-night practice counts for that evening) |
 
 Each card shows:
 - **The current streak**, using *Atomic Habits*' "never miss twice" rule: one missed day (or week) is forgiven, two in a row end the streak.
-- **Your best streak** and **today's status** (with a "Practise now" link for accent).
+- **Your best streak** and **today's status** (with a "Practise now" link for speech).
 - **A 5-week chain:** coloured means done, grey means not done, dashed means no data.
 - **Your total "votes"** (every day the habit was done) for the person you're becoming.
 
 A different *Atomic Habits* quote appears each day. Change the targets with **Targets**; they're saved on the server, so every device uses them.
 
-Accent minutes use the same estimate as Accent Coach's Analytics page, based on each practised clip's length. On Cloud Run, the app reads `progress.json` from Accent Coach's bucket (read-only).
+Speech practice minutes use the same estimate as Accent Coach's Analytics page, based on each practised clip's length. On Cloud Run, the app reads `progress.json` from Accent Coach's bucket (read-only).
 
 ### Sleep
 
@@ -83,21 +82,45 @@ Accent minutes use the same estimate as Accent Coach's Analytics page, based on 
 
 ### Exercise
 
-Walks don't count unless **Count walks** is on.
+Built to make a slump obvious and to make restarting easy (based on behaviour-change research: feedback on the gap to your goal, "never miss twice", the goal-gradient and fresh-start effects, and making the next step small). Walks don't count unless **Count walks** is on. "Today" is the last day in your export; if it's 3+ days old the banner says so.
 
+- **Status banner:**
+  - **Behind** (red): 4+ days since your last workout, or the last 4 weeks under half your normal.
+  - **Slipping** (amber): last week missed the target.
+  - **On track** (green): otherwise.
+  - Each state says what it takes to get back on track this week.
 - **At a glance:**
-  - **Training time** this week vs your usual week.
-  - **Consistency:** how many of the last 12 weeks hit your training-days target, and your streak.
-  - **Morning sessions:** workouts started before noon in the last 4 weeks.
-- **Workout days:** calendar coloured by how long you trained (tap for the workouts and start times). On a phone it shows the latest weeks that fit.
-- **Training per week:** hours by type, with your average as a dashed line. Long ranges show each month's average week.
-- **What time you train:** workouts by start hour, mornings in amber.
+  - **This week:** days trained vs your target, Mon–Sun, and whether the target is still reachable.
+  - **Last 4 weeks:** training days vs your normal (the 6 months before), with the last 12 weeks coloured green (hit the target), amber (some) or red (none).
+  - **Since your last workout:** days, what it was, a 30-day strip and your longest break this year.
+- **Training days per month:** the last 18 months against about your target per month (e.g. 17 for 4 a week).
+- **Workout days:** calendar coloured by how long you trained. Small red squares mark breaks of a week or more. On a phone it shows the latest weeks that fit.
+- **Training per week:** hours by type, with your average as a dashed line.
+- **Which days** and **what time you train**: weekday and start-hour charts, mornings in amber.
+
+There's deliberately no "training vs sleep" comparison: in your data, busy training weeks don't show better sleep or heart numbers (other things change too), so it would mislead.
 
 ### Heart
 
 - **At a glance:** 7-day averages of HRV, resting heart rate and walking heart rate, vs your usual.
 - **HRV:** the average of all readings each day (not just overnight), with your normal range (middle half of days) shaded.
 - **Resting heart rate** and **walking heart rate** (average while walking; it drops as fitness improves).
+
+### Speech
+
+Practice from Accent Coach (read from its `progress.json`). Each practice is one sentence practised once; its time is estimated from the clip length, as on Accent Coach's Analytics page. Practice days run 07:00–07:00.
+
+- **At a glance:**
+  - **Practice time** this week vs your usual week.
+  - **The 100-hour milestone:** progress bar, total hours by week, and when you'd reach it at your last-4-weeks pace. After 100 h it moves to the next 100.
+  - **Sentences** this week (new vs repeats) against 70 a week.
+- **Daily practice:** minutes a day split into new sentences and repeats, with your daily target and a 7-day average. Long ranges show the average day of each week.
+- **Sentences per week**, against 70 a week.
+- **Road to 100 hours:** cumulative hours (all time) with a projection.
+- **When you practise:** practices by hour of the day.
+- **How often you repeat a sentence:** sentences practised 1×, 2×, 3×, 4×, 5×+.
+
+Words, the sentence lists and "bad" sentences stay on Accent Coach's Analytics page, because One Percent doesn't have the sentence text.
 
 ## Events
 
@@ -120,7 +143,7 @@ Events (e.g. a new mattress) appear as labelled lines on the charts. Tap one, or
 | `sleepdata.py` | Turns `export.zip` into the dashboard data |
 | `passauth.py` | Passphrase login (the same file is used in accent_coach) |
 | `templates/` | `index.html` and its parts (`tabs/`, glance cards, sheets); `empty.html` before the first upload |
-| `static/js/` | `core.js` (data, formatting, chart basics), `habits.js`, `sleep.js`, `exercise.js`, `heart.js`, `app.js` (Alpine) |
+| `static/js/` | `core.js` (data, formatting, chart basics), `habits.js`, `sleep.js`, `exercise.js`, `heart.js`, `speech.js`, `app.js` (Alpine) |
 | `static/src/app.css`, `tailwind.config.js` | Tailwind input and config (built to `static/dist/`) |
 | `static/upload.js` | Upload sheet |
 | `dev.sh` | Local run with CSS rebuilds |

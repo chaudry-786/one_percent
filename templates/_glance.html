@@ -1,4 +1,5 @@
-{# "At a glance" cards: icon + title, a big number, a mini chart (tap a point to see it) against your usual, and how it's going. #}
+{# "At a glance" cards: icon + title, a big number, a mini chart (tap a point to see it) or a strip of days, and how it's going.
+   Optional: g.tone ("bad"/"warn") colours the number, g.trend.tone the status line; g.progress draws a progress bar; g.strip a row of days. #}
 {% macro glance(items) %}
 <section class="grid gap-3 md:grid-cols-3">
   <template x-for="g in {{ items }}" :key="g.key">
@@ -7,12 +8,27 @@
         <span x-text="g.icon + '  ' + g.title"></span>
         <span x-show="g.badge" class="whitespace-nowrap rounded-full border border-amber-400/70 bg-amber-400/15 px-2 py-0.5 text-xs font-bold text-slate-900 dark:text-white" x-text="'★ ' + g.badge"></span>
       </div>
-      <div class="mt-2 text-4xl font-extrabold tracking-tight">
+      <div class="mt-2 text-4xl font-extrabold tracking-tight" :class="{ bad: 'text-rose-600 dark:text-rose-400', warn: 'text-amber-600 dark:text-amber-400' }[g.tone] || ''">
         <span x-text="g.num"></span><span class="ml-1 text-base font-semibold text-slate-500" x-text="g.unit"></span>
       </div>
-      <p class="text-xs" :class="pick != null ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-500'" x-text="pick != null ? g.chart.points[pick].text : g.label"></p>
-      <div class="cursor-pointer" :class="g.color" x-html="OP.mini(g.chart, pick)" @click="pick = OP.pickAt($event, g.chart, pick)"></div>
-      <p class="text-sm font-semibold" :class="g.trend.good ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'" x-text="g.trend.text"></p>
+      <div x-show="g.progress != null" class="mb-1 mt-2 h-2.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"><div class="h-full rounded-full" :class="g.fill" :style="`width:${g.progress}%`"></div></div>
+      <p class="text-xs" :class="pick != null ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-500'" x-text="pick != null && g.chart ? g.chart.points[pick].text : g.label"></p>
+      <template x-if="g.chart">
+        <div class="cursor-pointer" :class="g.color" x-html="OP.mini(g.chart, pick)" @click="pick = OP.pickAt($event, g.chart, pick)"></div>
+      </template>
+      <template x-if="g.strip">
+        <div class="my-4 flex gap-1" :class="g.strip.length > 7 ? 'gap-0.5' : 'gap-1.5'">
+          <template x-for="s in g.strip" :key="s.d">
+            <div class="flex-1 text-center">
+              <div class="rounded" :title="OP.fmtDay(s.d)" :class="[g.strip.length > 7 ? 'h-6' : 'h-9',
+                s.s === 'done' ? 'bg-emerald-500' : s.s === 'future' ? 'border border-dashed border-slate-300 dark:border-slate-700'
+                : s.s === 'today' ? 'border-2 border-slate-400 dark:border-slate-500' : 'bg-slate-200 dark:bg-slate-800']"></div>
+              <span x-show="s.label" class="text-[10px] text-slate-400" x-text="s.label"></span>
+            </div>
+          </template>
+        </div>
+      </template>
+      <p class="text-sm font-semibold" :class="g.trend.good ? 'text-emerald-600 dark:text-emerald-400' : { bad: 'text-rose-600 dark:text-rose-400', warn: 'text-amber-600 dark:text-amber-400' }[g.trend.tone] || 'text-slate-600 dark:text-slate-300'" x-text="g.trend.text"></p>
       <p class="mt-0.5 text-xs text-slate-500" x-text="g.sub"></p>
     </article>
   </template>

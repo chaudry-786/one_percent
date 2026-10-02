@@ -7,7 +7,7 @@ document.addEventListener("alpine:init", () => {
     metric: "deep", range: "1y", from: "", to: "", group: "week", dow: [0, 1, 2, 3, 4, 5, 6],
     selPeriod: null, selection: null, skipTap: false, night: OP.last, moreOpen: false,
     // exercise / heart
-    walks: false, exWeeklyHint: "", hrvRange: "", bucketHint: "", bucketInfo: null,
+    walks: false, exWeeklyHint: "", hrvRange: "", bucketHint: "", bucketInfo: null, speechDailyHint: "", speechUrl: OP.APP.accentUrl || "",
     // sheets
     optionsOpen: false, targetsOpen: false,
     targets: { ...OP.habits.DEFAULTS, ...(OP.APP.habits || {}) }, draft: {},
@@ -18,7 +18,9 @@ document.addEventListener("alpine:init", () => {
 
     get sleepGlance() { return OP.sleep.glanceCards(this.targets); },
     get habitCards() { return OP.habits.cards(this.targets); },
+    get speechGlance() { return OP.speech.glanceCards(); },
     get exGlance() { return OP.exercise.glanceCards(this.targets.gymDays); },
+    get exStatus() { return OP.exercise.status(this.targets.gymDays); },
     get compare() { return this.cmpEvent ? OP.sleep.compare(this.cmpEvent) : null; },
     get bounds() {
       if (this.range === "custom" && this.from && this.to && this.from <= this.to) return [this.from, this.to];
@@ -42,13 +44,13 @@ document.addEventListener("alpine:init", () => {
       try { saved = localStorage.getItem("op-theme"); } catch { /* storage blocked */ }
       this.dark = saved ? saved === "dark" : !matchMedia("(prefers-color-scheme: light)").matches;
       this.applyTheme();
-      // the open tab lives in the URL (#sleep, #exercise, #heart) so a refresh stays on it; Habits is the plain URL
-      const TABS = ["habits", "sleep", "exercise", "heart"], fromHash = () => (TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "habits");
+      // the open tab lives in the URL (#sleep, #exercise, #heart, #speech) so a refresh stays on it; Habits is the plain URL
+      const TABS = ["habits", "sleep", "exercise", "heart", "speech"], fromHash = () => (TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "habits");
       this.tab = fromHash();
       this.$watch("tab", t => history.replaceState(null, "", t === "habits" ? location.pathname : `#${t}`));
       addEventListener("hashchange", () => { this.tab = fromHash(); });
       for (const k of ["metric", "group", "range", "from", "to"]) this.$watch(k, () => { this.selPeriod = null; });
-      for (const k of ["tab", "metric", "range", "from", "to", "group", "dow", "selPeriod", "night", "moreOpen", "walks", "events"]) this.$watch(k, () => this.render());
+      for (const k of ["tab", "metric", "range", "from", "to", "group", "dow", "selPeriod", "night", "moreOpen", "walks", "events", "targets"]) this.$watch(k, () => this.render());
       this.render();
     },
     applyTheme() { document.documentElement.classList.toggle("dark", this.dark); },
@@ -72,6 +74,7 @@ document.addEventListener("alpine:init", () => {
           if (this.moreOpen) OP.sleep.calendar(this, list, b);
         } else if (this.tab === "exercise") OP.exercise.render(this, b);
         else if (this.tab === "heart") OP.heart.render(this, b);
+        else if (this.tab === "speech") OP.speech.render(this, b);
       }));
     },
     showNight(d) {
@@ -103,9 +106,9 @@ document.addEventListener("alpine:init", () => {
     },
 
     // habit targets
-    openTargets() { this.draft = { ...this.targets, asleepH: this.targets.asleepMin / 60 }; this.targetsOpen = true; },
+    openTargets() { this.draft = { ...this.targets }; this.targetsOpen = true; },
     async saveTargets() {
-      const habits = { wakeBy: this.draft.wakeBy, deepMin: +this.draft.deepMin, asleepMin: Math.round(+this.draft.asleepH * 60), gymDays: +this.draft.gymDays, accentMin: +this.draft.accentMin };
+      const habits = { wakeBy: this.draft.wakeBy, gymDays: +this.draft.gymDays, accentMin: +this.draft.accentMin };
       try { this.targets = { ...this.targets, ...(await OP.api("/api/settings", { habits })).habits }; this.targetsOpen = false; }
       catch { alert("Couldn't save targets. Check your connection and try again."); }
     },
