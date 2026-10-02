@@ -1,61 +1,88 @@
-{# Habits: one card per habit. Streak (never miss twice), today, a 5-week chain, and "votes" for who you're becoming. #}
+{# Habits: today's votes on top, then one card per habit led by habit strength (evidence-based model, see README), votes
+   and the never-miss-twice streak; "More info" charts any habit over time. #}
 <section x-show="tab === 'habits'" class="grid gap-4">
-  <div class="flex flex-wrap items-end justify-between gap-3">
-    <blockquote class="max-w-2xl text-lg leading-snug">
-      “<span x-text="quote"></span>”
-      <small class="mt-1 block text-xs text-slate-500">One missed day is fine. Never miss twice.</small>
-    </blockquote>
-    <button type="button" class="btn" x-show="webapp" @click="openTargets()">Targets</button>
+  <div class="card">
+    <div class="flex items-center justify-between gap-3">
+      <p class="eyebrow">Today</p>
+      <span class="text-sm font-semibold" x-text="`${habitCards.filter(h => h.vote === 'cast').length} of ${habitCards.length} votes cast`"></span>
+    </div>
+    <div class="mt-3 grid gap-2" :class="habitCards.length === 3 ? 'grid-cols-3' : 'grid-cols-2'">
+      <template x-for="h in habitCards" :key="h.id">
+        <div class="rounded-xl border p-2 text-center"
+             :class="h.vote === 'cast' ? 'border-transparent ' + h.style.done + ' text-white' : 'border-slate-200 dark:border-slate-700'">
+          <div class="text-xl" x-text="h.icon"></div>
+          <div class="text-xs font-semibold" x-text="h.vote === 'cast' ? '✓ cast' : h.vote === 'open' ? 'not yet' : 'needs upload'"></div>
+        </div>
+      </template>
+    </div>
+    <div class="mt-3 flex items-start justify-between gap-3 border-t border-slate-200 pt-3 dark:border-slate-800">
+      <p class="text-xs text-slate-500"><b class="text-slate-700 dark:text-slate-200" x-text="`${yearSummary.year} so far:`"></b> <span x-text="yearSummary.line"></span></p>
+      <button type="button" class="btn -my-1 shrink-0" x-show="webapp" @click="openTargets()">Targets</button>
+    </div>
   </div>
 
-  <div class="grid gap-4 lg:grid-cols-2">
+  <div class="grid gap-4 lg:grid-cols-3">
     <template x-for="h in habitCards" :key="h.id">
-      <article class="card grid gap-3 border-t-4" :class="h.style.top">
-        <div class="flex items-center gap-3">
-          <div class="grid h-10 w-10 place-items-center rounded-xl text-xl" :class="h.style.icon" x-text="h.icon"></div>
+      <article class="card grid content-start gap-3 border-t-4" :class="h.style.top" x-data="{ pick: null }">
+        <div class="flex items-start justify-between gap-3">
           <div>
-            <h3 class="font-semibold" x-text="h.name"></h3>
-            <p class="text-xs text-slate-500" x-text="h.target"></p>
+            <h3 class="font-semibold" x-text="h.icon + '  ' + h.name"></h3>
+            <p class="text-xs text-slate-500" x-text="`I'm ${h.who} · ${h.target}`"></p>
+          </div>
+          <div class="text-right">
+            <span class="whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide" :class="h.style.icon + ' ' + h.style.text" x-text="h.level"></span>
+            <p class="mt-1 text-[11px] text-slate-500" x-text="h.fading"></p>
           </div>
         </div>
 
-        <div class="flex flex-wrap items-end justify-between gap-3">
+        <div class="flex items-center gap-4">
+          <div class="relative shrink-0">
+            <div x-html="h.ring"></div>
+            <span class="absolute inset-0 grid place-items-center text-xl font-extrabold" x-text="h.pct + '%'"></span>
+          </div>
           <div>
-            <template x-if="h.st.streak">
-              <p><span class="text-4xl font-extrabold tracking-tight" x-text="h.st.streak"></span>
-                <span class="ml-1 text-sm text-slate-600 dark:text-slate-300" x-text="h.st.unit + (h.st.streak === 1 ? '' : 's') + ' in a row'"></span></p>
-            </template>
-            <template x-if="!h.st.streak">
-              <p class="text-xl font-semibold" x-text="'Start a new streak ' + (h.weekly ? 'this week' : 'today')"></p>
-            </template>
-            <p class="text-xs text-slate-500" x-show="h.st.best > h.st.streak" x-text="'Best: ' + h.st.best + ' ' + h.st.unit + 's'"></p>
-          </div>
-          <div class="max-w-[60%] text-right text-sm text-slate-600 dark:text-slate-300">
-            <span x-text="h.now.text"></span>
-            <span x-show="h.now.done" class="font-bold" :class="h.style.text">✓</span>
-            <a x-show="h.now.link" :href="h.now.link" target="_blank" rel="noopener" class="mt-1 block font-semibold" :class="h.style.text">Practise now →</a>
+            <p class="text-xs uppercase tracking-wide text-slate-500">Habit strength</p>
+            <p class="font-semibold" x-text="h.next"></p>
+            <p x-show="h.comeback" class="text-xs text-slate-500" x-text="h.comeback"></p>
+            <p class="mt-1 text-sm" :class="h.vote === 'cast' ? 'font-semibold ' + h.style.text : 'text-slate-600 dark:text-slate-300'" x-text="h.voteText"></p>
+            <a x-show="h.now.link && h.vote === 'open'" :href="h.now.link" target="_blank" rel="noopener" class="text-sm font-semibold" :class="h.style.text">Practise now →</a>
           </div>
         </div>
 
-        <div class="grid max-w-sm grid-cols-[repeat(7,minmax(0,1fr))_2.5rem] items-center gap-1.5">
-          <template x-for="l in ['M','T','W','T','F','S','S']"><span class="text-center text-[10px] text-slate-400" x-text="l"></span></template>
-          <span></span>
-          <template x-for="row in h.rows">
-            <div class="contents">
-              <template x-for="c in row.cells" :key="c.d">
-                <div class="aspect-square max-h-8 rounded-md" :title="c.title"
-                     :class="[c.s === 'done' ? h.style.done : c.s === 'miss' ? 'bg-slate-200 dark:bg-slate-800' : c.s === 'unknown' ? 'border border-dashed border-slate-300 dark:border-slate-700' : c.s === 'pending' ? 'border-2 border-slate-300 dark:border-slate-600' : '',
-                              c.today ? 'ring-2 ring-slate-400 ring-offset-1 ring-offset-white dark:ring-offset-slate-900' : '']"></div>
-              </template>
-              <span class="text-right text-[11px]" :class="row.week?.hit ? 'font-bold ' + h.style.text : 'text-slate-400'" x-text="row.week ? row.week.text : ''"></span>
-            </div>
-          </template>
+        <p x-show="h.warn" class="rounded-lg bg-rose-50 px-3 py-1.5 text-sm font-semibold text-rose-700 dark:bg-rose-500/10 dark:text-rose-300" x-text="h.warn"></p>
+
+        <p class="text-xs text-slate-500" x-text="`${h.votes} votes for becoming ${h.who} since ${h.since}`"></p>
+
+        <div>
+          <p class="text-xs" :class="pick != null ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-500'"
+             x-text="pick != null ? h.chart.points[pick].text : 'Habit strength through ' + yearSummary.year + ' · tap the line'"></p>
+          <div class="cursor-pointer" :class="h.style.line" x-html="OP.mini(h.chart, pick)" @click="pick = OP.pickAt($event, h.chart, pick)"></div>
         </div>
 
-        <p class="border-t border-slate-200 pt-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-300">
-          <span x-text="h.st.recent"></span> · <b x-text="h.st.votes"></b> votes for becoming <span x-text="h.who"></span>
-        </p>
+        <p class="border-t border-slate-200 pt-2 text-xs text-slate-500 dark:border-slate-800"
+           x-text="h.now.text + ' · ' + (h.st.streak ? `streak ${h.st.streak} ${h.st.unit}${h.st.streak === 1 ? '' : 's'}` : `start a new streak ${h.weekly ? 'this week' : 'today'}`) + ' · never miss twice'"></p>
       </article>
     </template>
   </div>
+
+  <button type="button" class="btn justify-self-start" @click="habitsMoreOpen = !habitsMoreOpen" x-text="(habitsMoreOpen ? '▾' : '▸') + ' More info'"></button>
+  <div x-show="habitsMoreOpen" class="card">
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="seg">
+        <template x-for="h in habitCards" :key="h.id">
+          <button type="button" :aria-pressed="habitPick === h.id" @click="habitPick = h.id" x-text="h.icon + ' ' + h.name.replace('Wake up early', 'Wake early').replace(' practice', '')"></button>
+        </template>
+      </div>
+      {% include "_range.html" %}
+    </div>
+    <p class="hint mt-2" x-text="habitHint"></p>
+    <div id="habitChart" class="mt-2 h-72"></div>
+    <div x-show="habitPick === 'wake'" class="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+      <h3 class="font-semibold">Average wake-up time, by week</h3>
+      <p class="hint" x-text="wakeHint"></p>
+      <div id="habitWakeChart" class="mt-2 h-64"></div>
+    </div>
+  </div>
+
+  <p class="text-center text-xs text-slate-500" x-text="`“${quote}”`"></p>
 </section>

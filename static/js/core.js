@@ -174,7 +174,7 @@ window.OP = (() => {
   // short labels for mini-chart scales
   function short(v, unit) {
     if (v == null) return "";
-    return { clock: clock(v), dur: hm(v), min: `${Math.round(v)}m`, count: `${+v.toFixed(1)}` }[unit] ?? `${Math.round(v)}`;
+    return { clock: clock(v), dur: hm(v), min: `${Math.round(v)}m`, count: `${+v.toFixed(1)}`, pct: `${Math.round(v)}%` }[unit] ?? `${Math.round(v)}`;
   }
 
   const TONES = { good: "#10b981", warn: "#f59e0b", bad: "#f43f5e" }; // optional per-bar meaning: hit / partly / missed

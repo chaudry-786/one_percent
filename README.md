@@ -46,11 +46,44 @@ Three habits, each judged against a fixed target. There are no comparisons, just
 | Train | any workout except walks, **4 days a week** | each week (Mon–Sun) |
 | Speech practice | 15+ min of practice, read from Accent Coach's saved history | each day, 07:00 to 07:00 (late-night practice counts for that evening) |
 
+At the top, **Today** shows each habit's vote for today: cast ✓, not yet, or "needs upload". Wake and Train only know about today once a new export is uploaded; Speech is live. Under it is one line with this year's totals.
+
 Each card shows:
-- **The current streak**, using *Atomic Habits*' "never miss twice" rule: one missed day (or week) is forgiven, two in a row end the streak.
-- **Your best streak** and **today's status** (with a "Practise now" link for speech).
-- **A 5-week chain:** coloured means done, grey means not done, dashed means no data.
-- **Your total "votes"** (every day the habit was done) for the person you're becoming.
+- **Habit strength** (a ring, 0–100%), with a level: Forming, Building, Strong or Automatic. There's an arrow when it's fading (e.g. "↓ from 91% in Jul") and a near target such as "9 more training days → 80%".
+- **Today's vote**, with the strength it adds (about +2% when you're mid-way).
+- **"You missed yesterday. Don't miss twice."**, shown only when it applies.
+- **Votes** (every day the habit was done) for the person you're becoming, with a bar to the next milestone (every 25 under 100, then every 50).
+- **Habit strength through the year** as a small line. Tap it for a week's value.
+- **The current streak**, using "never miss twice".
+
+**Habit strength: the science.** The number models automaticity, using published findings rather than being tuned to anyone's data.
+
+- **Formula** (applied on every opportunity): `H ← H + α × (did − H)`. Doing the habit moves strength towards 100%, and missing an opportunity moves it towards 0. The habit system strengthens actions you repeat in a context and weakens ones you don't, regardless of reward (Miller, Shenhav & Ludvig 2019). This is the same exponential form as Hull's habit-strength theory (1943).
+- **Opportunities:**
+  - **Wake early and speech:** every day (speech days run 07:00–07:00).
+  - **Training:** 4 a week. Each training day counts as done, and the days short of 4 count as missed at the end of the week, so rest days are free.
+- **Learning rate:**
+  - **Daily habits:** α ≈ 4.4%, so 66 daily repetitions reach 95% of the plateau (Lally et al. 2010: median 66 days; Singh et al. 2024 meta-analysis: medians 59–66).
+  - **Training:** α ≈ 6.5%, so 24 sessions (4 a week for 6 weeks, the minimum found to establish an exercise habit; Kaushal & Rhodes 2015) reach 80%.
+- **What follows from this:**
+  - **The start is the fastest part:** 27% after a perfect week, 74% after 30 days, 95% after 66.
+  - **A single miss barely matters** (Lally 2010 found the same), but a run of misses steadily weakens the habit.
+  - **Over time strength settles near the share of opportunities you take,** weighted to recent weeks.
+  - **It never resets to zero:** lapses inhibit a habit rather than erase it, and relearning is fast (Bouton 2014). Hence the "comes back quickly" line.
+- **Levels:** Forming under 40%, Building 40–80%, Strong 80–95%, Automatic 95%+.
+
+References:
+- Lally, P., van Jaarsveld, C. H. M., Potts, H. W. W., & Wardle, J. (2010). How are habits formed: Modelling habit formation in the real world. *European Journal of Social Psychology*, 40(6), 998–1009.
+- Singh, B., et al. (2024). Time to form a habit: a systematic review and meta-analysis of health behaviour habit formation and its determinants. *Healthcare*, 12(23).
+- Miller, K. J., Shenhav, A., & Ludvig, E. A. (2019). Habits without values. *Psychological Review*, 126(2), 292–311.
+- Hull, C. L. (1943). *Principles of Behavior*. Appleton-Century.
+- Kaushal, N., & Rhodes, R. E. (2015). Exercise habit formation in new gym members: a longitudinal study. *Journal of Behavioral Medicine*, 38(4), 652–663.
+- Bouton, M. E. (2014). Why behavior change is difficult to sustain. *Preventive Medicine*, 68, 29–36.
+- Fournier, M., et al. (2017). Effects of circadian cortisol on the development of a health habit. *Health Psychology*, 36(11), 1059–1064. (Morning habits became automatic sooner; background only.)
+
+**More info** (under the cards) charts one habit over time. Pick Wake early, Train or Speech and a date range, as on the Sleep tab. The line is habit strength each day; the bars are how often you did it each week (for training, 4 days is a full week). For Wake early it also shows your average wake-up time each week against your target.
+
+Votes (from *Atomic Habits*: "every action is a vote for the type of person you wish to become") only ever go up.
 
 A different *Atomic Habits* quote appears each day. Change the targets with **Targets**; they're saved on the server, so every device uses them.
 
