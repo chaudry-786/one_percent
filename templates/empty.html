@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Percent</title>
+<style>
+  :root { color-scheme: light; --page:#f4f6f9; --surface:#fff; --surface-2:#eef1f5; --border:rgba(15,23,42,.09); --ink:#0f172a; --ink-2:#475569; --accent:#2a78d6; --bad:#c23434; }
+  @media (prefers-color-scheme: dark) { :root { color-scheme: dark; --page:#0b0f17; --surface:#131a26; --surface-2:#1b2433; --border:rgba(255,255,255,.08); --ink:#f1f5f9; --ink-2:#b4bfcf; --accent:#3987e5; --bad:#e66767; } }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--page); color:var(--ink); font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; padding:16px; }
+  main { max-width:420px; text-align:center; }
+  h1 { margin:0 0 8px; font-size:24px; }
+  p { color:var(--ink-2); margin:0 0 24px; }
+  button { height:46px; padding:0 22px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-size:16px; font-weight:600; cursor:pointer; }
+</style>
+</head>
+<body>
+<main>
+  <h1>One Percent</h1>
+  <p>Small habits, compounding results. Upload your Apple Health export to see how your sleep, exercise and heart are trending.</p>
+  <button type="button" onclick="SleepUpload.open()">Upload export</button>
+</main>
+<script src="/static/upload.js"></script>
+</body>
+</html>

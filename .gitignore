@@ -1,0 +1,12 @@
+# personal health data and generated output - never commit
+export.zip
+*.zip
+*.parquet
+sleep_dashboard.html
+.store/
+
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+sleep_analysis.ipynb

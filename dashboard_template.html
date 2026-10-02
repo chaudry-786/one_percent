@@ -1,0 +1,2301 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Percent</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.6.0/echarts.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --border: rgba(15, 23, 42, 0.09);
+  --ink: #0f172a;
+  --ink-2: #475569;
+  --muted: #8a94a6;
+  --grid: #e6e9ef;
+  --axis: #c7cdd8;
+  --accent: #2a78d6;
+  --accent-ink: #ffffff;
+  --good: #0a7f0a;
+  --bad: #c23434;
+  /* stage identity - fixed per entity, validated adjacent-pair order: total, deep, core, rem, awake */
+  --s-total: #eda100;
+  --s-deep: #2a78d6;
+  --s-core: #1baf7a;
+  --s-rem: #4a3aa7;
+  --s-awake: #eb6834;
+  --s-unspecified: #898781;
+  --s-schedule: #e87ba4;
+  --record: #b7791f;
+  /* workout groups: categorical slots 1-4 in validated order */
+  --c-strength: #2a78d6; --c-running: #eb6834; --c-cardio: #1baf7a; --c-walking: #eda100;
+  /* ordinal / sequential ramp (blue), low -> high */
+  --ramp: #cde2fb,#9ec5f4,#6da7ec,#3987e5,#256abf,#184f95,#0d366b;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0b0f17;
+  --surface: #131a26;
+  --surface-2: #1b2433;
+  --border: rgba(255, 255, 255, 0.08);
+  --ink: #f1f5f9;
+  --ink-2: #b4bfcf;
+  --muted: #7b8698;
+  --grid: #222c3c;
+  --axis: #344055;
+  --accent: #3987e5;
+  --accent-ink: #ffffff;
+  --good: #22b24c;
+  --bad: #e66767;
+  --s-total: #c98500;
+  --s-deep: #3987e5;
+  --s-core: #199e70;
+  --s-rem: #9085e9;
+  --s-awake: #d95926;
+  --s-unspecified: #898781;
+  --s-schedule: #d55181;
+  --record: #f2b705;
+  --c-strength: #3987e5; --c-running: #d95926; --c-cardio: #199e70; --c-walking: #c98500;
+  --ramp: #13325e,#184f95,#1c5cab,#2a78d6,#5598e7,#86b6ef,#cde2fb;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+
+/* ---------- header & controls ---------- */
+header.top {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 20px 24px 8px; max-width: 1440px; margin: 0 auto;
+}
+header.top h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+header.top { flex-wrap: wrap; }
+header.top .brand { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+header.top .sub { color: var(--muted); font-size: 12.5px; }
+.icon-btn {
+  border: 1px solid var(--border); background: var(--surface); border-radius: 10px;
+  height: 36px; padding: 0 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  color: var(--ink-2);
+}
+.icon-btn:hover { color: var(--ink); background: var(--surface-2); }
+
+.controls {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--page) 88%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.controls-inner {
+  max-width: 1440px; margin: 0 auto; padding: 10px 24px;
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+}
+/* metric picker */
+.picker { position: relative; }
+.picker-btn {
+  height: 36px; border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 0 12px;
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; max-width: 70vw;
+}
+.picker-btn:hover { background: var(--surface-2); }
+.picker-btn .dots { display: inline-flex; gap: 3px; }
+.picker-btn .dot { width: 10px; height: 10px; border-radius: 50%; }
+.picker-btn .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-btn .unit { color: var(--muted); font-weight: 500; white-space: nowrap; }
+.picker-btn .caret { color: var(--muted); font-size: 11px; }
+.popover {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; width: 320px; max-width: calc(100vw - 32px);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 8px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.28);
+}
+.pop-sec { padding: 6px 4px 8px; }
+.pop-sec + .pop-sec { border-top: 1px solid var(--border); }
+.pop-h { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 2px 6px 6px; display: flex; justify-content: space-between; }
+.pop-h small { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.opt {
+  display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; text-align: left;
+  padding: 7px 8px; border-radius: 8px; cursor: pointer; color: var(--ink);
+}
+.opt:hover { background: var(--surface-2); }
+.opt:disabled { opacity: .4; cursor: default; background: transparent; }
+.opt .box { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--axis); flex: none; display: grid; place-items: center; font-size: 11px; color: #fff; }
+.opt.radio .box { border-radius: 50%; }
+.opt[aria-checked="true"] .box { border-color: transparent; }
+.opt .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.opt .desc { margin-left: auto; color: var(--muted); font-size: 12px; }
+.pop-sec .seg { margin: 0 6px; }
+/* options drawer & active filter tags */
+.more { border-top: 1px solid var(--border); }
+.more-inner { max-width: 1440px; margin: 0 auto; padding: 12px 24px 14px; display: flex; flex-wrap: wrap; gap: 14px 32px; align-items: flex-start; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 6px 0 10px; border-radius: 999px; font-size: 12.5px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--ink); border: 0; cursor: pointer;
+}
+.pill b { font-weight: 400; color: var(--ink-2); font-size: 14px; padding: 0 4px; }
+.pill:hover b { color: var(--ink); }
+.spacer { flex: 1; }
+.link-btn { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 4px 2px; font-size: 13px; }
+.cmp-grid { display: grid; gap: 0; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.cmp { padding: 6px 14px 8px; border-left: 1px solid var(--border); }
+.cmp:first-child { border-left: 0; padding-left: 0; }
+.cmp .k { color: var(--ink-2); font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+.cmp .k i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.cmp .v { font-size: 20px; font-weight: 650; margin-top: 2px; }
+.cmp .s { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.cmp .delta { font-size: 13px; }
+.muted { color: var(--muted); font-weight: 400; }
+.ev-form { margin-top: 6px; }
+.ev-form .field { height: 29px; }
+.ev-label { width: 150px; }
+.more-charts { grid-column: span 12; }
+.more-charts > summary {
+  cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 10px; padding: 9px 14px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-weight: 600; font-size: 13.5px;
+}
+.more-charts > summary::-webkit-details-marker { display: none; }
+.more-charts > summary::before { content: "▸"; color: var(--muted); transition: transform .15s; }
+.more-charts[open] > summary::before { transform: rotate(90deg); }
+.more-charts > summary span { color: var(--muted); font-weight: 400; }
+.more-grid { display: grid; gap: 16px; grid-template-columns: repeat(12, minmax(0, 1fr)); margin-top: 16px; }
+.highlights { grid-column: span 12; display: flex; flex-wrap: wrap; gap: 12px; }
+.hl {
+  flex: 1 1 280px; display: flex; gap: 12px; align-items: center; padding: 12px 16px; border-radius: 14px;
+  background: color-mix(in srgb, var(--record) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--record) 40%, transparent);
+}
+.hl .ic { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--record); color: #1a1405; font-size: 15px; flex: none; }
+.hl .new { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: var(--record); color: #1a1405; font-size: 11px; font-weight: 700; vertical-align: 1px; }
+.hl b { display: block; font-size: 14px; font-weight: 620; }
+.hl span { color: var(--ink-2); font-size: 12.5px; }
+.sel-bar { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 9px 14px; margin: 2px 0 8px; border-radius: 10px;
+  background: var(--surface-2); font-size: 13px; color: var(--ink-2); }
+.sel-bar b { color: var(--ink); font-weight: 620; }
+.sel-bar .spacer { flex: 1; }
+.kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ctl { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.ctl > label, .ctl > .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink-2);
+  border-radius: 999px; padding: 5px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; white-space: nowrap; transition: background .12s, color .12s, border-color .12s;
+}
+.chip:hover { color: var(--ink); border-color: var(--axis); }
+.chip[aria-pressed="true"] { background: var(--surface-2); color: var(--ink); border-color: var(--ink-2); }
+.chip .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.chip[aria-pressed="false"] .dot { opacity: .35; }
+.chip:disabled { opacity: .35; cursor: default; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 2px; }
+.seg button {
+  border: 0; background: transparent; padding: 5px 11px; border-radius: 8px; cursor: pointer; color: var(--ink-2); font-size: 13px; white-space: nowrap;
+}
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg button:disabled { opacity: .35; cursor: default; }
+.field {
+  height: 31px; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 0 8px; color: var(--ink);
+}
+.field:focus, .chip:focus-visible, .seg button:focus-visible, .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.goal-input { width: 78px; }
+.ctl small { color: var(--muted); font-size: 12px; }
+
+/* ---------- tabs ---------- */
+.tabs { display: inline-flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 3px; }
+.tabs button { border: 0; background: transparent; padding: 7px 16px; border-radius: 9px; cursor: pointer; color: var(--ink-2); font-weight: 600; font-size: 14px; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { background: var(--surface-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--border); }
+.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+body:not([data-tab="sleep"]) .sleep-only { display: none !important; }
+.toolbar { grid-column: span 12; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.toolbar .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+
+/* ---------- habits ---------- */
+.hero { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px 24px; align-items: center; }
+.hero .headline { font-size: 18px; line-height: 1.45; max-width: 760px; }
+.hero .headline b { font-weight: 650; }
+.hero .sub { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.habit-grid { grid-column: span 12; display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1000px) { .habit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .habit-grid { grid-template-columns: 1fr; } }
+.habit { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; }
+.habit .h-title { font-weight: 620; font-size: 14.5px; }
+.habit .h-desc { display: block; color: var(--muted); font-size: 12.5px; font-weight: 400; margin-top: 1px; }
+.habit .h-effect { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin-top: 10px; }
+.habit .h-effect.good { color: var(--good); } .habit .h-effect.bad { color: var(--bad); } .habit .h-effect.flat { color: var(--ink-2); }
+.habit .h-what { color: var(--ink-2); font-size: 13px; }
+.habit .h-detail { color: var(--ink-2); font-size: 12.5px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.habit .h-freq { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.habit.dim { opacity: .55; }
+.tracker-wrap { overflow-x: auto; }
+.tracker { display: grid; grid-template-columns: 170px repeat(28, minmax(14px, 1fr)) 170px; gap: 5px 3px; align-items: center; min-width: 760px; }
+.tk-label { font-size: 13px; padding-right: 8px; }
+.tk-streak { font-size: 12px; color: var(--ink-2); padding-left: 12px; white-space: nowrap; }
+.tk-streak b { color: var(--ink); }
+.tk-cell { height: 22px; border-radius: 5px; background: var(--surface-2); }
+.tk-cell.on { background: var(--accent); }
+.tk-cell.na { background: transparent; box-shadow: inset 0 0 0 1px var(--border); }
+.tk-day { font-size: 10px; color: var(--muted); text-align: center; }
+.tk-day.wk { color: var(--ink-2); font-weight: 600; }
+.legend-row { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-top: 10px; flex-wrap: wrap; }
+.legend-row i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 5px; }
+
+/* ---------- layout ---------- */
+main { max-width: 1440px; margin: 0 auto; padding: 18px 24px 48px; display: grid; gap: 16px; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px 12px; min-width: 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+.card h2 { margin: 0; font-size: 15px; font-weight: 620; }
+.card .hint { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+.span-12 { grid-column: span 12; } .span-8 { grid-column: span 8; } .span-7 { grid-column: span 7; }
+.span-6 { grid-column: span 6; } .span-5 { grid-column: span 5; } .span-4 { grid-column: span 4; }
+@media (max-width: 1100px) { .span-8, .span-7, .span-6, .span-5, .span-4 { grid-column: span 12; } }
+.chart { width: 100%; height: 340px; }
+.chart.tall { height: 400px; }
+.chart.short { height: 260px; }
+
+/* KPIs */
+.kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.kpi-group { grid-column: span 12; display: grid; gap: 10px; }
+.kpi-group h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+.kpi-group h3 .dot { width: 10px; height: 10px; border-radius: 50%; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+.kpi .k { color: var(--muted); font-size: 12px; }
+.kpi .v { font-size: 24px; font-weight: 650; letter-spacing: -0.01em; margin-top: 2px; }
+.kpi .s { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+.delta { font-weight: 600; }
+.delta.good { color: var(--good); } .delta.bad { color: var(--bad); } .delta.flat { color: var(--muted); }
+
+/* tables */
+.tbl-wrap { max-height: 340px; overflow: auto; border: 1px solid var(--border); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { position: sticky; top: 0; background: var(--surface-2); color: var(--ink-2); font-weight: 600; }
+
+.hyp-nav { display: flex; gap: 6px; align-items: center; }
+.hyp-stats { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+.hyp-stats b { color: var(--ink); font-weight: 600; }
+.legend-inline { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--ink-2); }
+.legend-inline span { display: inline-flex; align-items: center; gap: 6px; }
+.legend-inline i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.empty { color: var(--muted); padding: 40px 0; text-align: center; }
+.edges-input { width: 200px; }
+footer { max-width: 1440px; margin: 0 auto; padding: 0 24px 32px; color: var(--muted); font-size: 12px; }
+
+@media (max-width: 640px) {
+  header.top, .controls-inner, main, footer { padding-left: 16px; padding-right: 16px; }
+  .controls { position: static; }
+  .chart { height: 300px; } .chart.tall { height: 340px; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div>
+      <h1>One Percent</h1>
+      <div class="sub" id="subtitle"></div>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Sections"></nav>
+  </div>
+  <div class="row">
+    <button class="icon-btn" id="uploadBtn" title="Upload a new Apple Health export" hidden>⇪ Upload export</button>
+    <button class="icon-btn" id="copyLink" title="Copy a link to this exact view">Copy view link</button>
+    <button class="icon-btn" id="themeBtn" title="Toggle light / dark">◐ Theme</button>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="controls-inner">
+    <div class="picker sleep-only">
+      <button type="button" class="picker-btn" id="metricBtn" aria-haspopup="true" aria-expanded="false" title="Choose what to chart"></button>
+      <div class="popover" id="metricPop" hidden>
+        <div class="pop-sec"><div class="pop-h">Sleep stages <small>pick one or more</small></div><div id="stageList"></div></div>
+        <div class="pop-sec"><div class="pop-h">Show as</div><div class="seg" id="unitSeg"></div></div>
+        <div class="pop-sec"><div class="pop-h">Schedule &amp; quality</div><div id="schedList"></div></div>
+        <div class="pop-sec"><div class="pop-h">Heart &amp; activity</div><div id="healthList"></div></div>
+      </div>
+    </div>
+    <div class="seg" id="rangeSeg" aria-label="Date range"></div>
+    <div class="seg sleep-only" id="groupSeg" aria-label="Group by"></div>
+    <div class="pills" id="activePills"></div>
+    <span class="spacer"></span>
+    <button type="button" class="icon-btn" id="moreBtn" aria-expanded="false" aria-controls="morePanel">Options</button>
+  </div>
+  <div class="more" id="morePanel" hidden>
+    <div class="more-inner">
+      <div class="ctl">
+        <span class="lbl">Custom dates</span>
+        <div class="row">
+          <input type="date" class="field" id="fromDate" aria-label="From"> –
+          <input type="date" class="field" id="toDate" aria-label="To">
+        </div>
+      </div>
+      <div class="ctl sleep-only">
+        <span class="lbl">Moving average lines</span>
+        <div class="chips" id="maChips"></div>
+      </div>
+      <div class="ctl">
+        <span class="lbl">Which nights</span>
+        <div class="chips" id="dowChips"></div>
+      </div>
+      <div class="ctl sleep-only">
+        <label for="goalInput">Goal</label>
+        <div class="row"><input class="field goal-input" id="goalInput" inputmode="decimal" placeholder="none"><small id="goalUnit"></small></div>
+      </div>
+      <div class="ctl">
+        <span class="lbl">Events</span>
+        <div class="chips" id="eventList"></div>
+        <form class="row ev-form" id="eventForm">
+          <input type="date" class="field" id="evDate" aria-label="Event date" required>
+          <input class="field ev-label" id="evLabel" placeholder="e.g. New pillow" aria-label="Event name" required maxlength="40">
+          <button type="submit" class="icon-btn" style="height:29px">Add</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main id="cmpHost" hidden style="padding-bottom:0">
+  <section class="card span-12" id="cmpCard">
+    <div class="card-head">
+      <div><h2 id="cmpTitle">Before &amp; after</h2><div class="hint" id="cmpHint"></div></div>
+      <button type="button" class="icon-btn" id="cmpClose" title="Hide comparison">Close ✕</button>
+    </div>
+    <div class="cmp-grid" id="cmpGrid"></div>
+  </section>
+</main>
+
+<!-- ============ HABITS ============ -->
+<main class="tab" data-tab="habits">
+  <section class="card span-12 hero">
+    <div>
+      <div class="headline" id="habitHeadline"></div>
+      <div class="sub">From your own nights in the selected range. They're links, not proof, but they're <i>your</i> links.</div>
+    </div>
+    <div class="row">
+      <span class="lbl" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600">Measure by</span>
+      <div class="seg" id="habitOutcome"></div>
+    </div>
+  </section>
+  <section class="habit-grid" id="habitCards"></section>
+  <section class="card span-12">
+    <div class="card-head">
+      <div><h2>Habit tracker</h2><div class="hint" id="trackerHint"></div></div>
+    </div>
+    <div class="tracker-wrap"><div class="tracker" id="tracker"></div></div>
+    <div class="legend-row"><span><i style="background:var(--accent)"></i>Done</span><span><i style="background:var(--surface-2)"></i>Not done</span><span><i style="box-shadow:inset 0 0 0 1px var(--border)"></i>No data</span></div>
+  </section>
+</main>
+
+<!-- ============ EXERCISE ============ -->
+<main class="tab" data-tab="exercise">
+  <section class="kpi-group"><div class="kpis" id="exKpis"></div></section>
+  <section class="card span-12">
+    <div class="card-head">
+      <div><h2>Workout days</h2><div class="hint" id="exCalHint"></div></div>
+      <button type="button" class="chip" id="walksBtn" title="Walks are light, so they're left out by default">Count walks</button>
+    </div>
+    <div id="exCalChart" class="chart"></div>
+  </section>
+  <section class="card span-7">
+    <div class="card-head"><div><h2>Training per week</h2><div class="hint" id="exWeeklyHint"></div></div></div>
+    <div id="exWeeklyChart" class="chart"></div>
+  </section>
+  <section class="card span-5">
+    <div class="card-head"><div><h2>What time you train</h2><div class="hint">Workouts by start time</div></div></div>
+    <div id="exTimeChart" class="chart"></div>
+  </section>
+  <section class="card span-12">
+    <div class="card-head">
+      <div><h2>Does training time affect your sleep?</h2><div class="hint">Nights after a rest day vs after a morning, afternoon or evening workout</div></div>
+      <div class="seg" id="exOutcome"></div>
+    </div>
+    <div id="exTimingChart" class="chart short"></div>
+  </section>
+</main>
+
+<!-- ============ HEART ============ -->
+<main class="tab" data-tab="heart">
+  <section class="kpi-group"><div class="kpis" id="heartKpis"></div></section>
+  <section class="card span-7">
+    <div class="card-head">
+      <div><h2>Overnight HRV</h2><div class="hint">While asleep. Higher usually means better recovery. Your normal range: <b id="hrvChartRange" style="color:var(--ink)"></b></div></div>
+      <button type="button" class="link-btn" id="hrvHabitsLink">What raises my HRV? →</button>
+    </div>
+    <div id="hrvChart" class="chart"></div>
+  </section>
+  <section class="card span-5">
+    <div class="card-head"><div><h2>Resting heart rate</h2><div class="hint">Morning after each night. Lower is usually better.</div></div></div>
+    <div id="rhrChart" class="chart"></div>
+  </section>
+</main>
+
+<!-- ============ SLEEP ============ -->
+<main class="tab" data-tab="sleep">
+  <section class="kpi-group" id="kpis" aria-live="polite"></section>
+  <section class="highlights" id="highlights" aria-live="polite" hidden></section>
+
+  <section class="card span-12">
+    <div class="card-head">
+      <div><h2 id="trendTitle">Trend</h2><div class="hint" id="trendHint"></div></div>
+      <div class="row">
+        <div class="seg" id="trendViewSeg"></div>
+      </div>
+    </div>
+    <div class="sel-bar" id="trendSel" hidden></div>
+    <div id="trendChart" class="chart tall"></div>
+    <div id="trendTable" class="tbl-wrap" hidden></div>
+  </section>
+
+  <section class="card span-7">
+    <div class="card-head">
+      <div><h2 id="bucketTitle">Nights by bucket</h2><div class="hint" id="bucketHint">Share of nights falling in each range, per period</div></div>
+      <div class="row">
+        <select class="field" id="bucketMetric" aria-label="Bucket metric"></select>
+        <input class="field edges-input" id="bucketEdges" title="Range edges, comma separated" aria-label="Range edges" hidden>
+        <button type="button" class="link-btn" id="edgesBtn">Edit ranges</button>
+      </div>
+    </div>
+    <div id="bucketChart" class="chart"></div>
+  </section>
+
+  <section class="card span-5">
+    <div class="card-head">
+      <div><h2>Stage mix</h2><div class="hint" id="mixHint">Each stage as % of time asleep, per period</div></div>
+    </div>
+    <div id="mixChart" class="chart"></div>
+  </section>
+
+  <details class="more-charts" id="moreCharts">
+  <summary>More charts <span>calendar and day of week</span></summary>
+  <div class="more-grid">
+  <section class="card span-8">
+    <div class="card-head">
+      <div><h2 id="calTitle">Calendar</h2><div class="hint">Click a night to see its stages below</div></div>
+      <select class="field" id="calMetric" aria-label="Calendar metric"></select>
+    </div>
+    <div id="calChart" class="chart"></div>
+  </section>
+
+  <section class="card span-4">
+    <div class="card-head">
+      <div><h2>By night of the week</h2><div class="hint">Average with interquartile range</div></div>
+    </div>
+    <div id="dowChart" class="chart"></div>
+  </section>
+  </div>
+  </details>
+
+  <section class="card span-12">
+    <div class="card-head">
+      <div><h2 id="hypTitle">Night detail</h2><div class="hyp-stats" id="hypStats"></div></div>
+      <div class="hyp-nav">
+        <button class="icon-btn" id="hypPrev" aria-label="Previous night">‹ Prev</button>
+        <input type="date" class="field" id="hypDate" aria-label="Night">
+        <button class="icon-btn" id="hypNext" aria-label="Next night">Next ›</button>
+      </div>
+    </div>
+    <div id="hypChart" class="chart short"></div>
+  </section>
+</main>
+<footer id="footer"></footer>
+
+<script id="sleep-data" type="application/json">__SLEEP_DATA__</script>
+<script id="app-config" type="application/json">__APP_CONFIG__</script>
+<script>
+"use strict";
+const DATA = JSON.parse(document.getElementById("sleep-data").textContent);
+// {"webapp": true, ...} when served by app.py; {} for the local file built by build_dashboard.py
+const APP = JSON.parse(document.getElementById("app-config").textContent);
+
+/* ======================= data model ======================= */
+const STAGES = ["total", "deep", "core", "rem", "unspecified", "awake"];
+const ASLEEP = ["deep", "core", "rem", "unspecified"];
+const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const SEG_STAGE = ["awake", "rem", "core", "deep", "unspecified"]; // codes from build_dashboard.py
+
+// kind: "stage" metrics share units (min / h / % of sleep) and can be overlaid.
+// Everything else is a single-series "schedule" metric with its own unit.
+const METRICS = {
+  total:       { label: "Total asleep", kind: "stage", better: +1 },
+  deep:        { label: "Deep",         kind: "stage", better: +1 },
+  core:        { label: "Core",         kind: "stage", better: 0 },
+  rem:         { label: "REM",          kind: "stage", better: +1 },
+  unspecified: { label: "Unspecified",  kind: "stage", better: 0 },
+  awake:       { label: "Awake",        kind: "stage", better: -1 },
+  inbed:       { label: "Time in bed",  kind: "schedule", unit: "dur", better: 0 },
+  eff:         { label: "Efficiency",   kind: "schedule", unit: "pct", better: +1 },
+  awakeN:      { label: "Wake-ups",     kind: "schedule", unit: "count", better: -1 },
+  bed:         { label: "Bedtime",      kind: "schedule", unit: "clock", better: 0 },
+  wake:        { label: "Wake time",    kind: "schedule", unit: "clock", better: 0 },
+  mid:         { label: "Midpoint",     kind: "schedule", unit: "clock", better: 0 },
+  hrv:         { label: "HRV",          kind: "schedule", unit: "ms", better: +1, group: "health" },
+  rhr:         { label: "Resting HR",   kind: "schedule", unit: "bpm", better: -1, group: "health" },
+  resp:        { label: "Respiratory rate", kind: "schedule", unit: "brpm", better: 0, group: "health" },
+  tempDev:     { label: "Wrist temp",   kind: "schedule", unit: "degC", better: 0, group: "health" },
+  exMin:       { label: "Exercise minutes", kind: "schedule", unit: "dur", better: +1, group: "health" },
+  wMin:        { label: "Workout time", kind: "schedule", unit: "dur", better: 0, group: "health" },
+};
+// Default bucket edges in base units (minutes), from the old notebook.
+const DEFAULT_EDGES = {
+  "total:min": [360, 420, 480], "deep:min": [30, 60, 90, 120], "rem:min": [60, 90, 120, 150],
+  "eff:pct": [80, 85, 90, 95], "awakeN:count": [5, 10, 15],
+};
+const DEFAULT_GOALS = { "total:min": 420, "deep:min": 60, "rem:min": 90, "eff:pct": 90, "bed:clock": 660 /* 23:00 */ };
+
+const NIGHTS = DATA.nights.map(n => {
+  const total = ASLEEP.reduce((s, k) => s + n[k], 0);
+  const inbed = n.wake - n.bed;
+  const date = new Date(n.d + "T12:00:00");
+  return {
+    ...n, total, inbed, date,
+    t: date.getTime(),
+    dow: (date.getDay() + 6) % 7,
+    eff: inbed > 0 ? Math.min(100, total / inbed * 100) : null,
+    mid: (n.bed + n.wake) / 2,
+  };
+});
+const DAY = 86400000;
+// over ~4 months, individual nights become noise: charts switch to averages
+const isLongRange = (b = viewBounds()) => (b[1] - b[0]) / DAY > 120;
+
+/* workouts: [date, start minute of day, duration, type, group, kcal, avg HR] from build_dashboard.py */
+const WORKOUTS = (DATA.workouts || []).map(([d, start, dur, type, group, kcal, hr]) =>
+  ({ d, start, dur, type, group, kcal, hr, t: new Date(d + "T12:00:00").getTime() }));
+const usedWorkouts = () => WORKOUTS.filter(w => state.walks || w.group !== "walking");
+const timingOf = start => (start < 720 ? "morning" : start < 1020 ? "afternoon" : "evening");
+// per-night workout features (depends on the walks toggle, so recomputed on every update)
+function applyWorkouts() {
+  const byDay = new Map();
+  for (const w of usedWorkouts()) (byDay.get(w.d) || byDay.set(w.d, []).get(w.d)).push(w);
+  for (const n of NIGHTS) {
+    const list = (byDay.get(n.d) || []).filter(w => w.start < n.bed + 720); // only training done before that night's bedtime
+    n.wN = list.length;
+    n.wMin = list.reduce((s, w) => s + w.dur, 0);
+    const main = list.reduce((a, w) => (!a || w.dur > a.dur ? w : a), null);
+    n.wTiming = main ? timingOf(main.start) : null;
+    n.wGap = list.length ? n.bed + 720 - Math.max(...list.map(w => w.start + w.dur)) : null;
+  }
+}
+// "regular bedtime": within 45 min of the median of the previous 14 nights (needs 7+ of them)
+NIGHTS.forEach((n, i) => {
+  const prev = NIGHTS.slice(Math.max(0, i - 14), i).filter(p => n.t - p.t <= 15 * DAY).map(p => p.bed).sort((a, b) => a - b);
+  n.regular = prev.length >= 7 ? Math.abs(n.bed - prev[Math.floor(prev.length / 2)]) <= 45 : null;
+});
+
+/* events: built-in ones come from annotations.json; ones added on the page live in this browser */
+const EV_KEY = "sleep-dashboard-events";
+// web app: events live on the server (shared across devices); local file: in this browser
+let serverEvents = APP.webapp ? (APP.events || []) : null;
+function userEvents() {
+  if (serverEvents) return serverEvents;
+  try { return JSON.parse(localStorage.getItem(EV_KEY) || "[]"); } catch { return []; }
+}
+function saveUserEvents(list) {
+  if (serverEvents) {
+    serverEvents = list;
+    fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ events: list }) })
+      .then(r => (r.ok ? r.json() : Promise.reject(r)))
+      .then(d => { serverEvents = d.events; update(); })
+      .catch(() => alert("Couldn't save the event. Check your connection and try again."));
+    return;
+  }
+  try { localStorage.setItem(EV_KEY, JSON.stringify(list)); } catch { /* storage unavailable */ }
+}
+function allEvents() {
+  return [...(DATA.events || []).map(e => ({ ...e, fixed: true })), ...userEvents()]
+    .filter(e => /^\d{4}-\d{2}-\d{2}$/.test(e.date))
+    .map(e => ({ ...e, t: new Date(e.date + "T12:00:00").getTime() }))
+    .sort((a, b) => a.t - b.t);
+}
+const fmtDay = d => new Date(d + "T12:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+const FIRST = NIGHTS[0].t, LAST = NIGHTS[NIGHTS.length - 1].t;
+const BY_DATE = new Map(NIGHTS.map((n, i) => [n.d, i]));
+
+/* ======================= state (mirrored in URL hash) ======================= */
+const DEFAULT_STATE = {
+  metrics: ["deep"], unit: "min", range: "1y", from: null, to: null,
+  group: "week", ma: { night: [14], week: [4], month: [3] }, dow: [0, 1, 2, 3, 4, 5, 6],
+  goals: {}, edges: {}, trendView: "chart",
+  night: null, theme: null, bucketMetric: null, calMetric: null, kpiMetric: null, cmpEvent: null, zoom: null,
+  moreOpen: false, selPeriod: null,
+  tab: "habits", outcome: "total", walks: false,
+};
+let state = loadState();
+
+function loadState() {
+  try {
+    const h = decodeURIComponent(location.hash.slice(1));
+    if (h) return { ...structuredClone(DEFAULT_STATE), ...JSON.parse(h), selPeriod: null }; // a selected week doesn't survive a reload
+  } catch (e) { /* ignore bad hash */ }
+  return structuredClone(DEFAULT_STATE);
+}
+function saveState() {
+  const { selPeriod, ...keep } = state;
+  history.replaceState(null, "", "#" + encodeURIComponent(JSON.stringify(keep)));
+}
+
+const isStageMode = () => METRICS[state.metrics[0]].kind === "stage";
+// Unit used for a metric right now: stage metrics follow the unit toggle, others have their own.
+function unitOf(key) {
+  const m = METRICS[key];
+  if (m.kind === "stage") return state.unit;
+  return m.unit === "dur" ? (state.unit === "min" ? "min" : "h") : m.unit;
+}
+const keyOf = (key) => `${key}:${unitOf(key) === "h" ? "min" : unitOf(key)}`; // goals/edges keyed per base unit
+
+/* value of metric for a night, in base units (min, %, count, clock-minutes-after-noon) */
+function rawValue(n, key) {
+  const u = unitOf(key);
+  if (METRICS[key].kind === "stage" && u === "pct") {
+    if (key === "total") return null;
+    if (key === "awake") return n.inbed > 0 ? n.awake / n.inbed * 100 : null;
+    return n.total > 0 ? n[key] / n.total * 100 : null;
+  }
+  return n[key];
+}
+// base -> display (hours are shown as decimal hours on axes)
+const toDisplay = (v, key) => (v == null ? null : unitOf(key) === "h" ? v / 60 : v);
+const fromDisplay = (v, key) => (unitOf(key) === "h" ? v * 60 : v);
+
+function fmt(v, key, { short = false } = {}) {
+  if (v == null || Number.isNaN(v)) return "–";
+  const u = unitOf(key);
+  if (u === "h" || (u === "min" && !short && v >= 90)) {
+    const m = Math.round(v), h = Math.floor(m / 60), r = m % 60;
+    return h ? `${h}h ${String(r).padStart(2, "0")}m` : `${r}m`;
+  }
+  if (u === "min") return `${Math.round(v)} min`;
+  if (u === "pct") return `${v.toFixed(1)}%`;
+  if (u === "count") return v.toFixed(Number.isInteger(v) ? 0 : 1);
+  if (u === "clock") return clock(v);
+  if (u === "ms") return `${Math.round(v)} ms`;
+  if (u === "bpm") return `${+v.toFixed(1)} bpm`;
+  if (u === "brpm") return `${v.toFixed(1)} br/min`;
+  if (u === "degC") return `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v).toFixed(2)} °C`;
+  return String(v);
+}
+function clock(minAfterNoon) {
+  const m = ((Math.round(minAfterNoon) + 720) % 1440 + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+// change between two averages: relative % for amounts, minutes for clock times
+function change(now, before, key) {
+  const m = METRICS[key], u = unitOf(key);
+  if (now == null || before == null) return null;
+  const d = now - before;
+  const cls = Math.abs(d) < 1e-9 || !m.better ? "flat" : m.better * d > 0 ? "good" : "bad";
+  const arrow = d > 0 ? "▲" : d < 0 ? "▼" : "■";
+  if (u === "degC") return { cls, html: `${arrow} ${fmtDelta(d, key)}`, abs: "" };
+  if (u === "clock") {
+    const word = d > 0 ? "later" : "earlier";
+    return { cls, html: Math.abs(d) < 0.5 ? "no change" : `${Math.round(Math.abs(d))} min ${word}`, abs: "" };
+  }
+  const rel = before !== 0 ? d / Math.abs(before) * 100 : null;
+  if (rel != null && Math.abs(rel) < 0.5) return { cls: "flat", html: `■ ${rel >= 0 ? "+" : "−"}${Math.abs(rel).toFixed(1)}%`, abs: fmtDelta(d, key) };
+  const relTxt = rel == null ? fmtDelta(d, key) : `${rel > 0 ? "+" : rel < 0 ? "−" : "±"}${Math.abs(rel).toFixed(1)}%`;
+  return { cls, html: `${arrow} ${relTxt}`, abs: rel == null ? "" : fmtDelta(d, key) };
+}
+function prevLabel() {
+  if (state.zoom && state.group === "night" || state.range === "custom") {
+    const b = viewBounds();
+    return `previous ${Math.round((b[1] - b[0]) / DAY)} days`;
+  }
+  return { "30d": "previous 30 days", "90d": "previous 90 days", "6m": "previous 6 months", "1y": "previous year", all: "previous period" }[state.range];
+}
+function fmtDelta(d, key) {
+  const u = unitOf(key);
+  const sign = d > 0 ? "+" : d < 0 ? "−" : "±";
+  const a = Math.abs(d);
+  if (u === "h" || u === "min" || u === "clock") return `${sign}${Math.round(a)} min`;
+  if (u === "pct") return `${sign}${a.toFixed(1)} pts`;
+  const suffix = { ms: " ms", bpm: " bpm", brpm: " br/min", degC: " °C" }[u] || "";
+  return `${sign}${a.toFixed(u === "degC" ? 2 : 1)}${suffix}`;
+}
+function tick(key) {
+  const u = unitOf(key);
+  return v => u === "clock" ? clock(v) : u === "h" ? `${+v.toFixed(1)}h` : u === "min" ? `${v}m` : u === "pct" ? `${v}%` : u === "degC" ? `${v > 0 ? "+" : ""}${+v.toFixed(2)}°` : v;
+}
+function axisLabel(key) {
+  return { h: "hours", min: "minutes", pct: "%", count: "count", clock: "time", ms: "ms", bpm: "bpm", brpm: "breaths/min", degC: "°C" }[unitOf(key)];
+}
+
+/* ======================= filtering & aggregation ======================= */
+function rangeBounds() {
+  if (state.range === "custom" && state.from && state.to)
+    return [new Date(state.from + "T00:00:00").getTime(), new Date(state.to + "T23:59:59").getTime()];
+  const days = { "30d": 30, "90d": 90, "6m": 182, "1y": 365, all: 1e5 }[state.range] ?? 365;
+  return [Math.max(FIRST, LAST - (days - 1) * DAY) - DAY / 2, LAST + DAY / 2];
+}
+// The trend chart's zoom slider narrows every other panel to the zoomed window.
+function viewBounds() {
+  const b = rangeBounds();
+  if (state.group !== "night" || !state.zoom) return b;
+  return [Math.max(b[0], state.zoom[0]), Math.min(b[1], state.zoom[1])];
+}
+function filtered(bounds = viewBounds()) {
+  const dows = new Set(state.dow);
+  return NIGHTS.filter(n => n.t >= bounds[0] && n.t <= bounds[1] && dows.has(n.dow));
+}
+function periodKey(n, p) {
+  if (p === "month") return n.d.slice(0, 7);
+  if (p === "week") return new Date(n.t - n.dow * DAY).toISOString().slice(0, 10);
+  return n.d;
+}
+function periodLabel(k, p) {
+  const d = new Date((p === "month" ? k + "-01" : k) + "T12:00:00");
+  if (p === "month") return d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  if (p === "week") return "w/c " + d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "2-digit" });
+  return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+}
+function groupBy(nights, p) {
+  const m = new Map();
+  for (const n of nights) {
+    const k = periodKey(n, p);
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(n);
+  }
+  return m;
+}
+const mean = a => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
+function quantile(sorted, q) {
+  if (!sorted.length) return null;
+  const pos = (sorted.length - 1) * q, lo = Math.floor(pos), hi = Math.ceil(pos);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+}
+const vals = (nights, key) => nights.map(n => rawValue(n, key)).filter(v => v != null && !Number.isNaN(v));
+function stats(nights, key) {
+  const v = vals(nights, key), s = [...v].sort((a, b) => a - b);
+  return { n: v.length, mean: mean(v), median: quantile(s, .5), min: s[0], max: s[s.length - 1], q1: quantile(s, .25), q3: quantile(s, .75) };
+}
+
+/* ======================= theme helpers ======================= */
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const colorOf = key => css(METRICS[key].kind === "stage" ? `--s-${key}` : "--s-schedule");
+const ramp = () => css("--ramp").split(",").map(s => s.trim());
+function pickRamp(n) {
+  const r = ramp();
+  if (n <= 1) return [r[3]];
+  // ordinal steps stay clear of the surface: skip the extreme end nearest the background
+  const lo = 1, hi = r.length - 1;
+  return Array.from({ length: n }, (_, i) => r[Math.round(lo + (hi - lo) * i / (n - 1))]);
+}
+function baseOption() {
+  const ink2 = css("--ink-2"), muted = css("--muted"), grid = css("--grid"), axis = css("--axis");
+  return {
+    backgroundColor: "transparent",
+    textStyle: { fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", color: ink2 },
+    animationDuration: 350,
+    grid: { left: 8, right: 16, top: 36, bottom: 8, containLabel: true },
+    tooltip: {
+      backgroundColor: css("--surface"), borderColor: css("--border"), borderWidth: 1,
+      textStyle: { color: css("--ink"), fontSize: 12.5 }, padding: [8, 12],
+      extraCssText: "border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);",
+    },
+    legend: { type: "scroll", top: 0, left: 0, right: 0, pageIconColor: muted, pageTextStyle: { color: muted }, icon: "roundRect", itemWidth: 12, itemHeight: 8, textStyle: { color: ink2 }, inactiveColor: muted },
+    _axis: {
+      axisLine: { lineStyle: { color: axis } }, axisTick: { show: false },
+      axisLabel: { color: muted, fontSize: 11.5 }, splitLine: { lineStyle: { color: grid } },
+      nameTextStyle: { color: muted, fontSize: 11.5 },
+    },
+  };
+}
+function ax(extra = {}) { return { ...baseOption()._axis, ...extra }; }
+
+const charts = {};
+function chart(id) {
+  if (!charts[id]) {
+    charts[id] = echarts.init(document.getElementById(id), null, { renderer: "canvas" });
+  }
+  return charts[id];
+}
+function resetCharts() { for (const k in charts) { charts[k].dispose(); delete charts[k]; } }
+
+/* ======================= controls ======================= */
+function el(tag, props = {}, children = []) {
+  const e = document.createElement(tag);
+  Object.assign(e, props);
+  for (const c of [].concat(children)) e.append(c);
+  return e;
+}
+function segmented(container, options, value, onPick, disabled = () => false) {
+  container.replaceChildren(...options.map(([v, label]) => {
+    const b = el("button", { type: "button", textContent: label });
+    b.setAttribute("aria-pressed", String(v === value));
+    b.disabled = disabled(v);
+    b.onclick = () => onPick(v);
+    return b;
+  }));
+}
+
+const SCHED_DESC = { inbed: "first to last", eff: "asleep ÷ in bed", awakeN: "per night", bed: "", wake: "", mid: "",
+  hrv: "overnight", rhr: "next morning", resp: "overnight", tempDev: "vs baseline", exMin: "that day", wMin: "that day" };
+const DOW_PRESETS = [["Every night", [0, 1, 2, 3, 4, 5, 6]], ["Weeknights", [6, 0, 1, 2, 3]], ["Weekends", [4, 5]]];
+const RANGE_LABEL = { "30d": "30 days", "90d": "90 days", "6m": "6 months", "1y": "1 year", all: "All time" };
+
+function renderControls() {
+  const stage = isStageMode();
+  const pk = state.metrics[0];
+
+  // --- metric button: coloured dots + names + unit
+  const btn = document.getElementById("metricBtn");
+  const names = state.metrics.map(k => METRICS[k].label).join(", ");
+  const unitTxt = stage ? { h: "hours", min: "minutes", pct: "% of sleep" }[state.unit] : "";
+  btn.innerHTML = `<span class="dots">${state.metrics.map(k => `<i class="dot" style="background:${colorOf(k)}"></i>`).join("")}</span>` +
+    `<span class="name">${names}</span>${unitTxt ? `<span class="unit">· ${unitTxt}</span>` : ""}<span class="caret">▼</span>`;
+
+  // --- popover lists
+  const opt = (k, radio) => {
+    const on = state.metrics.includes(k);
+    const b = el("button", { type: "button", className: "opt" + (radio ? " radio" : "") });
+    b.setAttribute("role", radio ? "menuitemradio" : "menuitemcheckbox");
+    b.setAttribute("aria-checked", String(on));
+    const c = colorOf(k);
+    b.innerHTML = `<span class="box" style="${on ? `background:${c}` : ""}">${on ? (radio ? "" : "✓") : ""}</span>` +
+      `<span>${METRICS[k].label}</span>` + (radio && SCHED_DESC[k] ? `<span class="desc">${SCHED_DESC[k]}</span>` : "");
+    return b;
+  };
+  document.getElementById("stageList").replaceChildren(...STAGES.map(k => {
+    const b = opt(k, false);
+    b.disabled = k === "total" && state.unit === "pct";
+    if (b.disabled) b.title = "Not available as % of sleep";
+    b.onclick = () => toggleMetric(k);
+    return b;
+  }));
+  for (const [id, grp] of [["schedList", undefined], ["healthList", "health"]])
+    document.getElementById(id).replaceChildren(...Object.keys(METRICS).filter(k => METRICS[k].kind === "schedule" && METRICS[k].group === grp).map(k => {
+      const b = opt(k, true);
+      b.onclick = () => { state.metrics = [k]; closePop(); update(); };
+      return b;
+    }));
+  segmented(document.getElementById("unitSeg"), [["h", "Hours"], ["min", "Minutes"], ["pct", "% of sleep"]], stage ? state.unit : null,
+    v => {
+      state.unit = v;
+      if (!stage) state.metrics = ["total"];
+      if (v === "pct") { state.metrics = state.metrics.filter(k => k !== "total"); if (!state.metrics.length) state.metrics = ["deep"]; }
+      update();
+    });
+
+  // --- main bar
+  segmented(document.getElementById("rangeSeg"), [["30d", "30d"], ["90d", "90d"], ["6m", "6m"], ["1y", "1y"], ["all", "All"]], state.range,
+    v => { state.range = v; state.from = state.to = null; state.zoom = null; update(); });
+  segmented(document.getElementById("groupSeg"), [["night", "Nightly"], ["week", "Weekly"], ["month", "Monthly"]], state.group,
+    v => { state.group = v; state.zoom = null; update(); });
+
+  // --- active filter tags (things hidden in Options that change the data)
+  const pills = [];
+  const pill = (text, onClear, title) => {
+    const b = el("button", { type: "button", className: "pill", title: title || "Remove" });
+    b.innerHTML = `${text}<b aria-hidden="true">×</b>`;
+    b.onclick = onClear;
+    return b;
+  };
+  const fmtD = t => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  if (state.range === "custom" && state.from && state.to)
+    pills.push(pill(`${fmtD(state.from + "T12:00")} – ${fmtD(state.to + "T12:00")}`, () => { state.range = "1y"; state.from = state.to = null; update(); }, "Back to last year"));
+  if (state.zoom && state.group === "night")
+    pills.push(pill(`Zoomed: ${fmtD(state.zoom[0])} – ${fmtD(state.zoom[1])}`, () => { state.zoom = null; update(); }, "Reset zoom"));
+  if (state.dow.length < 7) {
+    const preset = DOW_PRESETS.find(([, s]) => sameSet(s, state.dow));
+    pills.push(pill(preset ? preset[0] + " only" : state.dow.slice().sort().map(i => DOW[i]).join(", ") + " nights", () => { state.dow = DOW_PRESETS[0][1]; update(); }, "Show every night"));
+  }
+  document.getElementById("activePills").replaceChildren(...pills);
+
+  // --- options drawer
+  const b = viewBounds();
+  for (const id of ["fromDate", "toDate"]) {
+    const f = document.getElementById(id);
+    f.min = isoDate(FIRST); f.max = isoDate(LAST);
+  }
+  document.getElementById("fromDate").value = isoDate(Math.max(b[0], FIRST));
+  document.getElementById("toDate").value = isoDate(Math.min(b[1], LAST));
+
+  const maOpts = { night: [7, 14, 30, 90], week: [4, 8, 12], month: [3, 6, 12] }[state.group];
+  const maUnit = { night: "day", week: "week", month: "month" }[state.group];
+  const cur = state.ma[state.group] || [];
+  document.getElementById("maChips").replaceChildren(...maOpts.map(w => {
+    const c = el("button", { type: "button", className: "chip", textContent: `${w}-${maUnit}` });
+    c.setAttribute("aria-pressed", String(cur.includes(w)));
+    c.onclick = () => { const s = new Set(cur); s.has(w) ? s.delete(w) : s.add(w); state.ma[state.group] = [...s].sort((a, b) => a - b); update(); };
+    return c;
+  }));
+
+  document.getElementById("dowChips").replaceChildren(
+    ...DOW_PRESETS.map(([lbl, set]) => {
+      const c = el("button", { type: "button", className: "chip", textContent: lbl });
+      c.setAttribute("aria-pressed", String(sameSet(set, state.dow)));
+      c.onclick = () => { state.dow = set; update(); };
+      return c;
+    }),
+    el("span", { style: "width:6px" }),
+    ...DOW.map((d, i) => {
+      const c = el("button", { type: "button", className: "chip", textContent: d });
+      c.title = `Toggle ${d} nights`;
+      c.setAttribute("aria-pressed", String(state.dow.includes(i)));
+      c.onclick = () => { const s = new Set(state.dow); s.has(i) ? s.delete(i) : s.add(i); if (s.size) { state.dow = [...s]; update(); } };
+      return c;
+    }));
+
+  const g = goalOf(pk);
+  const gi = document.getElementById("goalInput");
+  if (document.activeElement !== gi) gi.value = g == null ? "" : (unitOf(pk) === "clock" ? clock(g) : +toDisplay(g, pk).toFixed(2));
+  document.getElementById("goalUnit").textContent = `for ${METRICS[pk].label} (${unitOf(pk) === "clock" ? "hh:mm" : axisLabel(pk)})`;
+
+  document.getElementById("eventList").replaceChildren(...allEvents().map(e => {
+    const c = el("span", { className: "chip" });
+    c.textContent = `${fmtDay(e.date)} · ${e.label}`;
+    c.setAttribute("aria-pressed", String(state.cmpEvent === e.date));
+    c.title = (e.fixed ? "From annotations.json. " : "") + "Click to compare before & after";
+    c.onclick = ev => { if (!ev.target.closest(".link-btn")) selectEvent(e.date); };
+    if (!e.fixed) {
+      const x = el("button", { type: "button", className: "link-btn", textContent: "×", title: "Remove event" });
+      x.style.cssText = "padding:0 0 0 4px;color:var(--muted)";
+      x.onclick = () => { if (state.cmpEvent === e.date) state.cmpEvent = null; saveUserEvents(userEvents().filter(u => !(u.date === e.date && u.label === e.label))); update(); };
+      c.append(x);
+    }
+    return c;
+  }));
+  const evDate = document.getElementById("evDate");
+  evDate.min = isoDate(FIRST); evDate.max = isoDate(LAST + 30 * DAY);
+
+  const nOpts = (state.dow.length < 7) + (state.range === "custom");
+  document.getElementById("moreBtn").textContent = nOpts ? `Options · ${nOpts}` : "Options";
+}
+
+document.getElementById("eventForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const date = document.getElementById("evDate").value, label = document.getElementById("evLabel").value.trim();
+  if (!date || !label) return;
+  saveUserEvents([...userEvents(), { date, label }]);
+  state.cmpEvent = date;
+  e.target.reset();
+  update();
+});
+
+/* popover & drawer behaviour */
+const pop = document.getElementById("metricPop"), metricBtn = document.getElementById("metricBtn");
+function closePop() { pop.hidden = true; metricBtn.setAttribute("aria-expanded", "false"); }
+metricBtn.onclick = () => { pop.hidden = !pop.hidden; metricBtn.setAttribute("aria-expanded", String(!pop.hidden)); };
+document.querySelector(".picker").addEventListener("click", e => e.stopPropagation());
+document.addEventListener("click", () => { if (!pop.hidden) closePop(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closePop(); });
+document.getElementById("moreBtn").onclick = e => {
+  const p = document.getElementById("morePanel");
+  p.hidden = !p.hidden;
+  e.currentTarget.setAttribute("aria-expanded", String(!p.hidden));
+};
+document.getElementById("edgesBtn").onclick = e => {
+  const i = document.getElementById("bucketEdges");
+  i.hidden = !i.hidden;
+  e.currentTarget.textContent = i.hidden ? "Edit ranges" : "Done";
+  if (!i.hidden) i.focus();
+};
+const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+const isoDate = t => new Date(t).toISOString().slice(0, 10);
+
+function toggleMetric(k) {
+  const m = METRICS[k];
+  if (m.kind === "schedule" || !isStageMode()) state.metrics = [k];
+  else {
+    const s = state.metrics.includes(k) ? state.metrics.filter(x => x !== k) : [...state.metrics, k];
+    state.metrics = s.length ? STAGES.filter(x => s.includes(x)) : [k];
+  }
+  update();
+}
+function goalOf(key) {
+  const gk = keyOf(key);
+  return gk in state.goals ? state.goals[gk] : (DEFAULT_GOALS[gk] ?? null);
+}
+function parseClock(s) {
+  const m = /^(\d{1,2}):?(\d{2})$/.exec(s.trim());
+  if (!m) return null;
+  return ((+m[1] * 60 + +m[2]) - 720 + 1440) % 1440; // minutes after noon
+}
+
+document.getElementById("goalInput").addEventListener("change", e => {
+  const k = state.metrics[0], s = e.target.value.trim();
+  let v = null;
+  if (s) v = unitOf(k) === "clock" ? parseClock(s) : fromDisplay(parseFloat(s), k);
+  state.goals[keyOf(k)] = v == null || Number.isNaN(v) ? null : v;
+  update();
+});
+for (const id of ["fromDate", "toDate"]) {
+  document.getElementById(id).addEventListener("change", () => {
+    const f = document.getElementById("fromDate").value, t = document.getElementById("toDate").value;
+    if (f && t && f <= t) { state.range = "custom"; state.from = f; state.to = t; state.zoom = null; update(); }
+  });
+}
+
+/* ======================= KPI tiles ======================= */
+/* ======================= highlights: records, milestones, streaks ======================= */
+// one value per night/week/month over ALL nights (records ignore the date-range filter); partial periods need a few nights
+function periodSeries(key, p) {
+  const minN = { night: 1, week: 3, month: 10 }[p];
+  return [...groupBy(NIGHTS, p).entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .map(([k, g]) => ({ k, v: mean(vals(g, key)), n: g.length })).filter(x => x.v != null && x.n >= minN);
+}
+const quarterOf = k => `Q${Math.ceil(+k.slice(5, 7) / 3)} ${k.slice(0, 4)}`;
+// best period per calendar year and per quarter, for metrics where "better" has a direction
+function periodRecords(pts, key) {
+  const dir = METRICS[key].better;
+  if (!dir || ["clock", "degC", "brpm"].includes(unitOf(key))) return null;
+  const better = (a, b) => (dir > 0 ? a > b : a < b);
+  const year = new Map(), quarter = new Map();
+  for (const x of pts) {
+    for (const [map, k] of [[year, x.k.slice(0, 4)], [quarter, quarterOf(x.k)]])
+      if (!map.has(k) || better(x.v, map.get(k).v)) map.set(k, x);
+  }
+  return { year, quarter, better };
+}
+function computeHighlights(key) {
+  const p = state.group;
+  const P = periodSeries(key, p);
+  const R = P.length >= 2 ? periodRecords(P, key) : null;
+  if (!R) return [];
+  const lastNight = NIGHTS[NIGHTS.length - 1], latest = P[P.length - 1];
+  const yr = lastNight.d.slice(0, 4), q = quarterOf(lastNight.d);
+  const word = { total: "total sleep", deep: "deep sleep", core: "core sleep", rem: "REM sleep", awake: "time awake", eff: "efficiency",
+    awakeN: "wake-ups", hrv: "HRV", rhr: "resting heart rate", exMin: "exercise", unspecified: "unspecified sleep" }[key] || METRICS[key].label.toLowerCase();
+  const soFar = p !== "night" && latest.k === periodKey(lastNight, p) && !(p === "week" && lastNight.dow === 6) && !(p === "month" && new Date(lastNight.t + DAY).getDate() === 1);
+  const when = x => (p === "night" ? fmtDay(x.k) : p === "week" ? `week of ${fmtDay(x.k)}` : periodLabel(x.k, p)) + (x === latest && soFar ? ` (so far, ${x.n} nights)` : "");
+  // the best before this record, within the same year / quarter
+  const prevBest = (rec, inScope) => P.filter(x => x !== rec && inScope(x)).reduce((a, x) => (!a || R.better(x.v, a.v) ? x : a), null);
+  const card = (title, rec, inScope) => {
+    const isNew = rec === latest, pb = isNew ? prevBest(rec, inScope) : null;
+    return { title, isNew, text: `${fmt(rec.v, key)} · ${when(rec)}` + (pb ? ` · previous best ${fmt(pb.v, key)} (${when(pb)})` : "") };
+  };
+  const items = [];
+  const yBest = R.year.get(yr), qBest = R.quarter.get(q);
+  const inYear = x => x.k.slice(0, 4) === yr, inQ = x => quarterOf(x.k) === q;
+  if (yBest) items.push(card(`Best ${p} of ${word} in ${yr}`, yBest, inYear));
+  return items;
+}
+function renderHighlights() {
+  const box = document.getElementById("highlights");
+  const items = computeHighlights(state.metrics[0]);
+  box.hidden = !items.length;
+  box.replaceChildren(...items.map(h => {
+    const d = el("div", { className: "hl" });
+    d.innerHTML = `<div class="ic" aria-hidden="true">★</div><div><b>${h.title}${h.isNew ? '<span class="new">New</span>' : ""}</b><span>${h.text}</span></div>`;
+    return d;
+  }));
+}
+
+function renderKpis(nights) {
+  const box = document.getElementById("kpis");
+  const b = viewBounds();
+  const span = b[1] - b[0];
+  const prev = filtered([b[0] - span, b[0] - 1]);
+  const shown = state.metrics.includes(state.kpiMetric) ? state.kpiMetric : state.metrics[0];
+  box.replaceChildren(...[shown].map(key => {
+    const s = stats(nights, key), p = stats(prev, key), m = METRICS[key];
+    const goal = goalOf(key);
+    const tiles = [];
+    let deltaHtml = "";
+    if (s.mean != null && p.mean != null && p.n >= 3) {
+      const c = change(s.mean, p.mean, key);
+      deltaHtml = `<span class="delta ${c.cls}">${c.html}</span> ${c.abs ? `<span class="muted">(${c.abs})</span> ` : ""}vs ${prevLabel()}`;
+    }
+    tiles.push(kpi("Average", fmt(s.mean, key), deltaHtml || `${s.n} nights`));
+    tiles.push(kpi("Median", fmt(s.median, key), `IQR ${fmt(s.q1, key, { short: true })} – ${fmt(s.q3, key, { short: true })}`));
+    const best = m.better < 0 ? s.min : s.max, worst = m.better < 0 ? s.max : s.min;
+    const lab = m.better ? ["Best night", "Worst night"] : unitOf(key) === "clock" ? ["Latest", "Earliest"] : ["Highest", "Lowest"];
+    tiles.push(kpi(lab[0], fmt(best, key), nightOf(nights, key, best)));
+    tiles.push(kpi(lab[1], fmt(worst, key), nightOf(nights, key, worst)));
+    if (goal != null) {
+      // clock goals mean "by this time"; otherwise follow which direction is better
+      const v = vals(nights, key), dir = m.better < 0 || unitOf(key) === "clock" ? -1 : 1;
+      const hit = v.filter(x => dir > 0 ? x >= goal : x <= goal).length;
+      tiles.push(kpi("Goal met", v.length ? `${Math.round(hit / v.length * 100)}%` : "–", `${hit} of ${v.length} nights ${dir > 0 ? "≥" : "≤"} ${fmt(goal, key)}`));
+    }
+    const grid = el("div", { className: "kpis" });
+    grid.append(...tiles);
+    const h = el("h3", {}, [el("span", { className: "dot" }), `${m.label}${m.kind === "stage" ? " · " + { h: "duration", min: "duration", pct: "% of sleep" }[state.unit] : ""}`]);
+    h.querySelector(".dot").style.background = colorOf(key);
+    const head = el("div", { className: "kpi-head" }, [h]);
+    if (state.metrics.length > 1) {
+      const tabs = el("div", { className: "seg" });
+      segmented(tabs, state.metrics.map(k => [k, METRICS[k].label]), key, v => { state.kpiMetric = v; saveState(); renderKpis(nights); });
+      head.append(tabs);
+    }
+    return el("div", { className: "kpi-group" }, [head, grid]);
+  }));
+}
+function kpi(k, v, s) {
+  const d = el("div", { className: "kpi" });
+  d.innerHTML = `<div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div>`;
+  return d;
+}
+function nightOf(nights, key, v) {
+  const n = nights.find(n => rawValue(n, key) === v);
+  return n ? `<a href="#" data-night="${n.d}" style="color:inherit">${periodLabel(n.d, "night")}</a>` : "";
+}
+document.getElementById("kpis").addEventListener("click", e => {
+  const a = e.target.closest("[data-night]");
+  if (a) { e.preventDefault(); showNight(a.dataset.night, true); }
+});
+
+/* ======================= before & after an event ======================= */
+const CMP_METRICS = ["total", "deep", "rem", "awake", "eff", "hrv", "rhr"];
+function renderCompare() {
+  const card = document.getElementById("cmpHost");
+  const ev = allEvents().find(e => e.date === state.cmpEvent && e.t > FIRST && e.t <= LAST);
+  card.hidden = !ev;
+  if (!ev) return;
+
+  // equal windows either side of the event (night of the event counts as "after"), capped at 90 days
+  const days = Math.min(90, Math.round((LAST - ev.t) / DAY) + 1);
+  const dows = new Set(state.dow);
+  const inWin = (a, b) => NIGHTS.filter(n => n.t >= a && n.t < b && dows.has(n.dow));
+  const after = inWin(ev.t - DAY / 2, ev.t + (days - 0.5) * DAY);
+  const before = inWin(ev.t - (days + 0.5) * DAY, ev.t - DAY / 2);
+  document.getElementById("cmpTitle").textContent = `Since ${ev.label}`;
+  const small = Math.min(after.length, before.length) < 14 ? " Still a small sample, so expect these to move around." : "";
+  document.getElementById("cmpHint").textContent =
+    `Average of the ${after.length} nights since ${fmtDay(ev.date)} vs the ${before.length} nights in the ${days} days before.${small}`;
+
+  // stage metrics are compared as durations here, whatever the unit toggle says
+  const saved = state.unit;
+  state.unit = "min";
+  document.getElementById("cmpGrid").replaceChildren(...CMP_METRICS.map(key => {
+    const a = mean(vals(after, key)), b = mean(vals(before, key));
+    const c = change(a, b, key);
+    const d = el("div", { className: "cmp" });
+    d.innerHTML = `<div class="k"><i style="background:${colorOf(key)}"></i>${METRICS[key].label}</div>
+      <div class="v">${fmt(a, key)}</div>
+      <div class="s">${c ? `<span class="delta ${c.cls}">${c.html}</span>` : ""} <span>from ${fmt(b, key)}</span></div>`;
+    return d;
+  }));
+  state.unit = saved;
+}
+
+function selectEvent(date) {
+  state.cmpEvent = date;
+  update();
+  document.getElementById("cmpCard").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+document.getElementById("cmpClose").onclick = () => { state.cmpEvent = null; update(); };
+// event lines carry their date; clicking one opens the before/after comparison
+function onEventClick(params) {
+  if (params.componentType === "markLine" && params.data && params.data.evDate) { selectEvent(params.data.evDate); return true; }
+  return false;
+}
+
+/* ======================= trend ======================= */
+function trendSeries(nights, metricKeys = state.metrics) {
+  const p = state.group;
+  const groups = groupBy(nights, p);
+  const keys = [...groups.keys()].sort();
+  return metricKeys.map(key => {
+    const pts = keys.map(k => {
+      const v = vals(groups.get(k), key);
+      const s = [...v].sort((a, b) => a - b);
+      return { k, x: p === "night" ? groups.get(k)[0].t : new Date((p === "month" ? k + "-01" : k) + "T12:00:00").getTime(), v: mean(v), n: v.length,
+        min: s[0], max: s[s.length - 1], lo: quantile(s, .1), hi: quantile(s, .9) };
+    }).filter(d => d.v != null);
+    const mas = (state.ma[p] || []).map(w => ({ w, data: movingAvg(pts, w, p) }));
+    return { key, pts, mas };
+  });
+}
+// time-based window: nightly MA covers the last w calendar days, period MA the last w periods
+function movingAvg(pts, w, p) {
+  const out = [];
+  if (p === "night") {
+    let lo = 0, sum = 0;
+    for (let i = 0; i < pts.length; i++) {
+      sum += pts[i].v;
+      while (pts[i].x - pts[lo].x >= w * DAY) sum -= pts[lo++].v;
+      const n = i - lo + 1;
+      const need = Math.max(1, Math.min(3, Math.round(w * state.dow.length / 7 / 2)));
+      out.push([pts[i].x, n >= need ? sum / n : null]);
+    }
+  } else {
+    for (let i = 0; i < pts.length; i++) {
+      const win = pts.slice(Math.max(0, i - w + 1), i + 1);
+      out.push([pts[i].x, win.length === w ? mean(win.map(d => d.v)) : null]);
+    }
+  }
+  return out;
+}
+
+/* clicking a week/month: shade its value bucket and pick out every other period that fell in it */
+function bucketStep(values, key) {
+  const s = [...values].sort((a, b) => a - b);
+  const raw = Math.max((quantile(s, 0.95) - quantile(s, 0.05)) / 4, 1e-6);
+  const u = unitOf(key);
+  if (u === "min" || u === "h") return [1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120].find(x => x >= raw) || 120;
+  const p10 = Math.pow(10, Math.floor(Math.log10(raw)));
+  return [1, 2, 5, 10].map(m => m * p10).find(x => x >= raw);
+}
+function rangeText(lo, hi, key) {
+  const u = unitOf(key);
+  if (u === "min") return `${+lo.toFixed(1)}–${+hi.toFixed(1)} min`;
+  if (u === "h") return `${hm(lo)}–${hm(hi)}`;
+  return `${fmt(lo, key)} – ${fmt(hi, key)}`;
+}
+function bucketSelection(s, p) {
+  if (!state.selPeriod || p === "night") return null;
+  const minN = p === "week" ? 3 : 10;
+  const pts = s.pts.filter(d => d.n >= minN || d.k === state.selPeriod);
+  const sel = pts.find(d => d.k === state.selPeriod);
+  if (!sel) return null;
+  const step = bucketStep(pts.map(d => d.v), s.key);
+  const lo = Math.floor(sel.v / step) * step, hi = lo + step;
+  const members = pts.filter(d => d.v >= lo && d.v < hi);
+  const earlier = members.filter(d => d.k < sel.k);
+  return { sel, lo, hi, members: new Set(members.map(d => d.k)), count: members.length, total: pts.length, last: earlier[earlier.length - 1] };
+}
+function drillInto(k, p) {
+  const start = new Date((p === "month" ? k + "-01" : k) + "T00:00:00");
+  const end = p === "month" ? new Date(start.getFullYear(), start.getMonth() + 1, 0) : new Date(start.getTime() + 6 * DAY);
+  Object.assign(state, { group: "night", range: "custom", from: isoDate(start.getTime() + DAY / 2), to: isoDate(end.getTime() + DAY / 2), zoom: null, selPeriod: null });
+  update();
+}
+function renderSelBar(B, key, p) {
+  const bar = document.getElementById("trendSel");
+  bar.hidden = !B;
+  if (!B) return;
+  const name = k => (p === "week" ? `Week of ${fmtDay(k)}` : periodLabel(k, "month"));
+  const share = B.count / B.total;
+  const rarity = share < 0.1 ? "rare" : share < 0.25 ? "uncommon" : share < 0.5 ? "common" : "very common";
+  bar.innerHTML = `<span><b>${name(B.sel.k)}: ${fmt(B.sel.v, key)}</b></span>
+    <span>${rangeText(B.lo, B.hi, key)} happened in <b>${B.count} of ${B.total}</b> ${p}s in this range (${Math.round(share * 100)}%), so it's <b>${rarity}</b>.
+    ${B.last ? `Last time: ${name(B.last.k).replace("Week of", "week of")}.` : `First time in this range.`}</span>
+    <span class="spacer"></span>
+    <button type="button" class="link-btn" id="selNights">See its nights</button>
+    <button type="button" class="link-btn" id="selClear">Clear ✕</button>`;
+  document.getElementById("selNights").onclick = () => drillInto(B.sel.k, p);
+  document.getElementById("selClear").onclick = () => { state.selPeriod = null; update(); };
+}
+
+let activeSel = null, skipPlotClick = false;
+function renderTrend(nights, inView) {
+  activeSel = null;
+  const p = state.group, series = trendSeries(nights);
+  const primary = state.metrics[0], u = unitOf(primary), multi = series.length > 1;
+  const groupName = { night: "nightly", week: "weekly average", month: "monthly average" }[p];
+  document.getElementById("trendTitle").textContent = state.metrics.map(k => METRICS[k].label).join(", ") + ` — ${groupName}`;
+  // nightly dots only for short ranges (or when there's no average line to show instead)
+  const showDots = p === "night" && (!isLongRange(rangeBounds()) || !(state.ma.night || []).length);
+  document.getElementById("trendHint").textContent = p !== "night"
+    ? `Line is the ${p}ly average. Click a ${p} to see how often you've had one like it.`
+    : showDots ? "Dots are nights, lines are moving averages. Click a dot for its stage detail."
+    : "Lines are moving averages. Pick 30d or 90d to see individual nights.";
+
+  segmented(document.getElementById("trendViewSeg"), [["chart", "Chart"], ["table", "Table"]], state.trendView, v => { state.trendView = v; update(); });
+  const showTable = state.trendView === "table";
+  if (p === "night" || multi || showTable) document.getElementById("trendSel").hidden = true;
+  if (allEvents().some(e => e.t >= rangeBounds()[0] && e.t <= rangeBounds()[1]))
+    document.getElementById("trendHint").textContent += " Click an event label to compare before & after.";
+  document.getElementById("trendChart").hidden = showTable;
+  document.getElementById("trendTable").hidden = !showTable;
+  if (showTable) return renderTrendTable(series);
+
+  const base = baseOption();
+  const out = [];
+  const dashes = [[6, 4], [2, 3], [10, 3, 2, 3], [1, 2]];
+  for (const s of series) {
+    const c = colorOf(s.key), name = METRICS[s.key].label;
+    if (showDots) {
+      out.push({
+        markPoint: multi ? undefined : trendMarks(s, p, s.pts.map(d => ({ k: d.k, x: d.x, v: toDisplay(d.v, s.key) }))),
+        name, type: "scatter", data: s.pts.map(d => [d.x, toDisplay(d.v, s.key), d.k]),
+        symbolSize: 6, itemStyle: { color: c, opacity: s.mas.length ? 0.45 : 0.85 }, emphasis: { scale: 1.8, itemStyle: { opacity: 1, borderColor: css("--surface"), borderWidth: 2 } },
+        z: 2,
+      });
+    } else if (p !== "night") {
+      const B = multi ? null : bucketSelection(s, p);
+      if (!multi) renderSelBar(B, s.key, p);
+      activeSel = B && { lo: toDisplay(B.lo, s.key), hi: toDisplay(B.hi, s.key) };
+      out.push({ name, type: "line", z: 3,
+        data: s.pts.map(d => {
+          const v = [d.x, toDisplay(d.v, s.key), d.k, d.n];
+          if (!B) return v;
+          const isSel = d.k === B.sel.k, inB = B.members.has(d.k);
+          return { value: v, symbolSize: isSel ? 15 : inB ? 11 : 5,
+            itemStyle: { color: c, opacity: inB ? 1 : 0.3, borderColor: isSel ? css("--ink") : css("--surface"), borderWidth: isSel ? 3 : 2 } };
+        }),
+        lineStyle: { width: 2, color: c, opacity: B ? 0.3 : 1 }, itemStyle: { color: c }, symbol: "circle", symbolSize: 7, showSymbol: !!B || s.pts.length < 60,
+        markArea: B ? { silent: true, itemStyle: { color: c, opacity: 0.12 }, data: [[{ yAxis: toDisplay(B.lo, s.key) }, { yAxis: toDisplay(B.hi, s.key) }]] } : undefined,
+        markPoint: multi ? undefined : trendMarks(s, p, s.pts.map(d => ({ k: d.k, x: d.x, v: toDisplay(d.v, s.key) })), "", !B) });
+    }
+    s.mas.forEach((ma, i) => {
+      const unitLbl = { night: "d", week: "w", month: "m" }[p];
+      out.push({
+        name: multi ? `${name} ${ma.w}${unitLbl} avg` : `${ma.w}${unitLbl} average`, type: "line",
+        data: ma.data.map(([x, v]) => [x, toDisplay(v, s.key)]), showSymbol: false, smooth: 0.2,
+        lineStyle: { opacity: activeSel ? 0.25 : 1, width: i === 0 && p === "night" ? 2.5 : 2, color: c, type: p === "night" ? (i === 0 ? "solid" : dashes[(i - 1) % dashes.length]) : dashes[i % dashes.length] },
+        itemStyle: { color: c }, z: 4, silent: p !== "night",
+        endLabel: { show: series.length <= 4, formatter: () => `${ma.w}${unitLbl}`, color: css("--ink-2"), fontSize: 11 },
+        markPoint: !multi && !showDots && p === "night" && i === 0
+          ? trendMarks(s, p, ma.data.filter(d => d[1] != null).map(([x, v]) => ({ k: null, x, v: toDisplay(v, s.key) })), "average") : undefined,
+      });
+    });
+  }
+  // overall mean + goal reference lines on the first series
+  const ref = [];
+  const pst = stats(inView, primary);
+  if (!multi && pst.mean != null) ref.push({ yAxis: toDisplay(pst.mean, primary), name: "avg", label: { formatter: `avg ${fmt(pst.mean, primary)}`, position: "insideStartTop", color: css("--ink-2") }, lineStyle: { color: css("--ink-2"), type: "solid", width: 1 } });
+  const g = goalOf(primary);
+  if (g != null) ref.push({ yAxis: toDisplay(g, primary), name: "goal", label: { formatter: `goal ${fmt(g, primary)}`, position: "insideEndBottom", color: css("--good") }, lineStyle: { color: css("--good"), type: [4, 4], width: 1.5 } });
+  const xb = rangeBounds();
+  for (const e of allEvents().filter(e => e.t >= xb[0] && e.t <= xb[1])) {
+    // grouped views plot each period at its start date, so snap the event to its period
+    const k = p === "night" ? null : periodKey({ d: e.date, t: e.t, dow: (new Date(e.t).getDay() + 6) % 7 }, p);
+    ref.push(eventLine({ xAxis: k ? new Date((p === "month" ? k + "-01" : k) + "T12:00:00").getTime() : e.t }, e.label, e.date));
+  }
+  if (ref.length && out.length) {
+    const target = out.find(s => !s.silent);
+    target.markLine = { symbol: "none", data: ref, emphasis: { disabled: true } };
+  }
+
+  const yAxis = ax({
+    type: "value", scale: true, position: "left",
+    // keep the whole selected bucket on screen
+    ...(activeSel ? (() => { const st = (activeSel.hi - activeSel.lo) / 2;
+      return { min: v => Math.floor(Math.min(v.min, activeSel.lo) / st) * st, max: v => Math.ceil(Math.max(v.max, activeSel.hi) / st) * st }; })() : {}),
+    axisLabel: { ...base._axis.axisLabel, formatter: tick(primary) },
+  });
+  const bottom = p === "night" ? 54 : 8;
+  const xMain = ax({ type: "time", splitLine: { show: false }, axisLabel: { ...base._axis.axisLabel, hideOverlap: true } });
+
+  const opt = {
+    ...base,
+    grid: { ...base.grid, top: 56, bottom, right: 48 },
+    legend: { ...base.legend, data: multi ? series.map(s => METRICS[s.key].label) : out.filter(s => !s.silent).map(s => s.name) },
+    tooltip: {
+      ...base.tooltip, trigger: showDots ? "item" : "axis", axisPointer: { type: "line", lineStyle: { color: css("--axis") } },
+      formatter: params => trendTooltip(params, series),
+    },
+    xAxis: xMain,
+    yAxis,
+    dataZoom: p === "night" ? [
+      { type: "inside", filterMode: "none", ...zoomWindow() },
+      { type: "slider", ...zoomWindow(), height: 22, bottom: 8, filterMode: "none", borderColor: css("--border"), backgroundColor: "transparent",
+        fillerColor: "color-mix(in srgb, " + css("--accent") + " 18%, transparent)", handleStyle: { color: css("--accent"), borderColor: css("--accent") },
+        dataBackground: { lineStyle: { color: css("--axis") }, areaStyle: { color: css("--grid") } }, textStyle: { color: css("--muted") }, labelFormatter: v => isoDate(v) },
+    ] : [],
+    series: out,
+  };
+  const c = chart("trendChart");
+  c.setOption(opt, true);
+  c.off("click");
+  c.on("click", params => {
+    if (onEventClick(params)) { skipPlotClick = true; return; }
+    const val = Array.isArray(params.value) ? params.value : params.data;
+    const k = val && val[2];
+    if (k && p === "night") { skipPlotClick = true; showNight(k, true); }
+  });
+  // weeks/months: a click anywhere in the plot selects the nearest period, so lines and markers never get in the way
+  // remove only our own listener: a bare off("click") would also strip ECharts' internal click handling
+  if (c.__plotClick) c.getZr().off("click", c.__plotClick);
+  // deferred so the chart's own click handling (event labels, night dots) runs first and can claim the click
+  c.__plotClick = e => setTimeout(() => {
+    if (skipPlotClick) { skipPlotClick = false; return; }
+    if (p === "night" || multi) return;
+    // the plot area plus a little slack, so the first and last points (which sit on its edges) are fully clickable
+    const g = c.getModel().getComponent("grid").coordinateSystem.getRect();
+    if (e.offsetX < g.x - 16 || e.offsetX > g.x + g.width + 24 || e.offsetY < g.y - 8 || e.offsetY > g.y + g.height + 8) return;
+    const x = c.convertFromPixel({ xAxisIndex: 0 }, e.offsetX);
+    const pts = series[0].pts;
+    if (!pts.length) return;
+    const near = pts.reduce((a, d) => (Math.abs(d.x - x) < Math.abs(a.x - x) ? d : a));
+    state.selPeriod = state.selPeriod === near.k ? null : near.k;
+    update();
+  }, 0);
+  c.getZr().on("click", c.__plotClick);
+  c.off("datazoom");
+  c.on("datazoom", () => {
+    clearTimeout(zoomTimer);
+    zoomTimer = setTimeout(() => {
+      const z = c.getOption().dataZoom[0];
+      const b = rangeBounds();
+      const full = z.startValue <= Math.max(b[0], FIRST) + DAY && z.endValue >= Math.min(b[1], LAST) - DAY;
+      state.zoom = full ? null : [z.startValue, z.endValue];
+      update({ keepTrend: true });
+    }, 200);
+  });
+}
+let zoomTimer;
+function zoomWindow() {
+  return state.zoom ? { startValue: state.zoom[0], endValue: state.zoom[1] } : { start: 0, end: 100 };
+}
+function eventLine(pos, label, date) {
+  return { ...pos, name: label, evDate: date, lineStyle: { color: css("--ink-2"), type: "solid", width: 1, opacity: 0.8 },
+    label: { formatter: label, position: "end", color: css("--ink"), fontSize: 11.5, fontWeight: 600,
+      backgroundColor: css("--surface-2"), padding: [3, 6], borderRadius: 4 } };
+}
+// event lines for category (week/month) axes: one line per period containing an event
+function periodEventLines(keys, p) {
+  const out = [];
+  for (const e of allEvents()) {
+    const k = periodKey({ d: e.date, t: e.t, dow: (new Date(e.t).getDay() + 6) % 7 }, p);
+    if (keys.includes(k)) {
+      const l = eventLine({ xAxis: periodLabel(k, p) }, e.label, e.date);
+      if (keys.indexOf(k) > keys.length / 2) l.label.align = "right"; // keep labels inside the chart near the right edge
+      out.push(l);
+    }
+  }
+  return out.length ? { symbol: "none", data: out, emphasis: { disabled: true } } : undefined;
+}
+// subtle hollow rings for the highest and lowest point plotted, alongside the gold record markers
+function trendMarks(s, p, plotted, what = "", withRecords = true) {
+  const rec = what || !withRecords ? undefined : recordMarks(s, p);
+  const taken = new Set((rec?.data || []).map(d => d.k));
+  const pts = plotted.filter(d => d.v != null);
+  const data = [...(rec?.data || [])];
+  if (pts.length >= 3) {
+    const hi = pts.reduce((a, d) => (d.v > a.v ? d : a)), lo = pts.reduce((a, d) => (d.v < a.v ? d : a));
+    const ink = css("--ink-2"), xs = [pts[0].x, pts[pts.length - 1].x], span = xs[1] - xs[0] || 1;
+    const side = d => ((d.x - xs[0]) / span > 0.9 ? "left" : (d.x - xs[0]) / span < 0.05 ? "right" : null);
+    const mark = (d, word, pos) => ({
+      coord: [d.x, d.v], symbol: "circle", symbolSize: 9,
+      itemStyle: { color: css("--surface"), borderColor: ink, borderWidth: 1.5 },
+      label: { show: true, position: side(d) || pos, distance: 6, color: ink, fontSize: 11, fontWeight: 400, backgroundColor: "transparent", padding: 0,
+        formatter: `${word}${what ? ` ${what}` : ""} ${fmt(fromDisplay(d.v, s.key), s.key)}` },
+    });
+    // a high/low that is also a gold record: say so on the record's label instead of adding a second marker
+    const onRecord = (d, word) => { const r = data.find(x => x.k != null && x.k === d.k); if (r) r.label.formatter = `${word} · ${r.label.formatter}`; return !!r; };
+    if (!onRecord(hi, "High")) data.push(mark(hi, "High", "top"));
+    if (lo !== hi && !onRecord(lo, "Low")) data.push(mark(lo, "Low", "bottom"));
+  }
+  if (!data.length) return undefined;
+  return { silent: true, symbol: "circle", itemStyle: rec?.itemStyle || { color: css("--surface") }, data, z: 6 };
+}
+// gold markers: each year's best period (labelled)
+function recordMarks(s, p) {
+  // records come from all your data; only those inside the visible range are marked
+  const R = periodRecords(periodSeries(s.key, p), s.key);
+  if (!R) return undefined;
+  const gold = css("--record"), years = new Set([...R.year.values()].map(r => r.k));
+  const inView = new Map(s.pts.map(d => [d.k, d]));
+  const spanYears = new Set(s.pts.map(d => d.k.slice(0, 4))).size;
+  const lbl = (rec, text, big) => { const d = inView.get(rec.k); return d && ({
+    k: rec.k, coord: [d.x, toDisplay(d.v, s.key)], symbolSize: big ? 14 : 9,
+    label: { show: big || spanYears <= 2, formatter: text, position: s.pts.indexOf(d) > s.pts.length * 0.85 ? "left" : "top", distance: big ? 10 : 7,
+      color: "#1a1405", fontSize: big ? 11 : 10, fontWeight: 700, backgroundColor: gold, padding: [2, 6], borderRadius: 4 },
+  }); };
+  const data = [...R.year.entries()].map(([y, r]) => lbl(r, `Best of ${y}`, true));
+  if (!data.some(Boolean)) return undefined;
+  // labels that would sit on top of each other: drop the later one below its marker
+  const shown = data.filter(d => d && d.label.show).sort((a, b) => a.coord[0] - b.coord[0]);
+  const span = (s.pts[s.pts.length - 1]?.x - s.pts[0]?.x) || 1;
+  for (let i = 1; i < shown.length; i++)
+    if (shown[i].coord[0] - shown[i - 1].coord[0] < span * 0.07 && shown[i - 1].label.position !== "bottom") shown[i].label.position = "bottom";
+  return { silent: true, symbol: "circle", itemStyle: { color: gold, borderColor: css("--surface"), borderWidth: 2 }, data: data.filter(Boolean), z: 6 };
+}
+function trendTooltip(params, series) {
+  const arr = [].concat(params);
+  if (!arr.length) return "";
+  if (arr[0].componentType === "markLine") {
+    const d = arr[0].data;
+    return d.evDate ? `<b>${d.name}</b> · ${fmtDay(d.evDate)}<br><span style="color:${css("--muted")}">Click to compare before &amp; after</span>` : `<b>${arr[0].name}</b>`;
+  }
+  const p = state.group;
+  const vOf = a => (Array.isArray(a.value) ? a.value : a.data);
+  const first = arr.find(a => vOf(a) && vOf(a)[2]) || arr[0];
+  const k = vOf(first) && vOf(first)[2];
+  const x = vOf(first) ? vOf(first)[0] : first.value[0];
+  let head = k ? periodLabel(k, p) : new Date(x).toLocaleDateString();
+  const rows = [];
+  for (const s of series) {
+    const pt = s.pts.find(d => d.x === x);
+    if (pt) {
+      const extra = p === "night" ? "" : ` <span style="color:${css("--muted")}">(${pt.n} nights, ${fmt(pt.min, s.key, { short: true })}–${fmt(pt.max, s.key, { short: true })})</span>`;
+      rows.push(dotRow(colorOf(s.key), METRICS[s.key].label, fmt(pt.v, s.key) + extra));
+    }
+    for (const ma of s.mas) {
+      const m = ma.data.find(d => d[0] === x);
+      if (m && m[1] != null) rows.push(dotRow(colorOf(s.key), `${series.length > 1 ? METRICS[s.key].label + " " : ""}${ma.w}${{ night: "d", week: "w", month: "m" }[p]} avg`, fmt(m[1], s.key), true));
+    }
+  }
+  return `<div style="font-weight:600;margin-bottom:4px">${head}</div>${rows.join("")}`;
+}
+function dotRow(c, label, v, ring) {
+  const dot = ring ? `border:2px solid ${c};width:6px;height:6px` : `background:${c};width:10px;height:10px`;
+  return `<div style="display:flex;align-items:center;gap:8px;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:6px"><i style="${dot};border-radius:50%;display:inline-block"></i>${label}</span><b style="margin-left:14px">${v}</b></div>`;
+}
+function renderTrendTable(series) {
+  const p = state.group;
+  const keys = [...new Set(series.flatMap(s => s.pts.map(d => d.k)))].sort().reverse();
+  const head = `<tr><th>${{ night: "Night", week: "Week", month: "Month" }[p]}</th>${series.map(s => `<th>${METRICS[s.key].label}</th>`).join("")}${p !== "night" ? "<th>Nights</th>" : ""}</tr>`;
+  const maps = series.map(s => new Map(s.pts.map(d => [d.k, d])));
+  const body = keys.map(k => `<tr><td>${periodLabel(k, p)}</td>${series.map((s, i) => `<td>${fmt(maps[i].get(k)?.v, s.key)}</td>`).join("")}${p !== "night" ? `<td>${maps[0].get(k)?.n ?? ""}</td>` : ""}</tr>`).join("");
+  document.getElementById("trendTable").innerHTML = `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+/* ======================= buckets ======================= */
+function bucketMetric() {
+  return state.metrics.includes(state.bucketMetric) ? state.bucketMetric : state.metrics[0];
+}
+function edgesFor(key, nights) {
+  const ek = keyOf(key);
+  if (state.edges[ek]?.length) return state.edges[ek];
+  if (DEFAULT_EDGES[ek]) return DEFAULT_EDGES[ek];
+  // quantile defaults, rounded to friendly steps
+  const s = vals(nights, key).sort((a, b) => a - b);
+  if (!s.length) return [];
+  const u = unitOf(key);
+  const step = { clock: 30, pct: 1, count: 1, ms: 5, bpm: 1, brpm: 0.5, degC: 0.1 }[u] ?? (s[s.length - 1] > 240 ? 30 : 10);
+  const e = [.2, .4, .6, .8].map(q => Math.round(quantile(s, q) / step) * step);
+  return [...new Set(e)];
+}
+function renderBuckets(nights) {
+  const key = bucketMetric(), p = "month";
+  fillSelect("bucketMetric", key, v => { state.bucketMetric = v; update(); });
+
+  const edges = edgesFor(key, nights);
+  const ei = document.getElementById("bucketEdges");
+  if (document.activeElement !== ei) ei.value = edges.map(e => unitOf(key) === "clock" ? clock(e) : +toDisplay(e, key).toFixed(2)).join(", ");
+  ei.placeholder = unitOf(key) === "clock" ? "e.g. 23:00, 00:00" : `edges in ${axisLabel(key)}`;
+  document.getElementById("bucketTitle").textContent = `${METRICS[key].label} — nights by range`;
+  document.getElementById("bucketHint").textContent = `Share of nights in each range, per ${p}`;
+
+  const labels = [];
+  const f = v => fmt(v, key, { short: true });
+  for (let i = 0; i <= edges.length; i++) {
+    if (i === 0) labels.push(`< ${f(edges[0])}`);
+    else if (i === edges.length) labels.push(`≥ ${f(edges[i - 1])}`);
+    else labels.push(`${f(edges[i - 1])} – ${f(edges[i])}`);
+  }
+  const groups = groupBy(nights, p), keys = [...groups.keys()].sort();
+  const counts = keys.map(k => {
+    const c = new Array(labels.length).fill(0);
+    for (const v of vals(groups.get(k), key)) {
+      let i = 0; while (i < edges.length && v >= edges[i]) i++;
+      c[i]++;
+    }
+    return c;
+  });
+  const totals = counts.map(c => c.reduce((a, b) => a + b, 0));
+  // colour ramp: "better" end is the strongest step
+  let colors = pickRamp(labels.length);
+  if (METRICS[key].better < 0) colors = colors.reverse();
+  const base = baseOption();
+  chart("bucketChart").setOption({
+    ...base,
+    legend: { ...base.legend, data: labels },
+    tooltip: {
+      ...base.tooltip, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: "rgba(127,127,127,.08)" } },
+      formatter: ps => {
+        const i = ps[0].dataIndex;
+        if (!Array.isArray(ps)) return ps.data?.evDate ? `<b>${ps.name}</b><br><span style="color:${css("--muted")}">Click to compare before &amp; after</span>` : "";
+        return `<div style="font-weight:600;margin-bottom:4px">${periodLabel(keys[i], p)} · ${totals[i]} nights</div>` +
+          ps.slice().reverse().map(x => dotRow(x.color, x.seriesName, `${x.value.toFixed(0)}% <span style="color:${css("--muted")}">(${counts[i][x.seriesIndex]})</span>`)).join("");
+      },
+    },
+    xAxis: ax({ type: "category", data: keys.map(k => periodLabel(k, p)), splitLine: { show: false }, axisLabel: { ...base._axis.axisLabel, hideOverlap: true } }),
+    yAxis: ax({ type: "value", max: 100, axisLabel: { ...base._axis.axisLabel, formatter: "{value}%" } }),
+    series: labels.map((l, i) => ({
+      name: l, type: "bar", stack: "b", barMaxWidth: 36, barCategoryGap: "18%",
+      data: counts.map((c, j) => totals[j] ? c[i] / totals[j] * 100 : 0),
+      itemStyle: { color: colors[i], borderColor: css("--surface"), borderWidth: 1,
+        borderRadius: i === labels.length - 1 ? [4, 4, 0, 0] : 0 },
+      emphasis: { focus: "series" },
+      markLine: i === 0 ? periodEventLines(keys, p) : undefined,
+    })),
+  }, true);
+  chart("bucketChart").off("click");
+  chart("bucketChart").on("click", onEventClick);
+}
+document.getElementById("bucketEdges").addEventListener("change", e => {
+  const key = bucketMetric();
+  const parts = e.target.value.split(/[,\s]+/).filter(Boolean);
+  const v = parts.map(s => unitOf(key) === "clock" ? parseClock(s) : fromDisplay(parseFloat(s), key)).filter(x => x != null && !Number.isNaN(x));
+  state.edges[keyOf(key)] = [...new Set(v)].sort((a, b) => a - b);
+  update();
+});
+function fillSelect(id, value, onChange) {
+  const s = document.getElementById(id);
+  s.replaceChildren(...state.metrics.map(k => el("option", { value: k, textContent: METRICS[k].label, selected: k === value })));
+  s.hidden = state.metrics.length < 2;
+  s.onchange = () => onChange(s.value);
+}
+
+/* ======================= stage mix ======================= */
+function renderMix(nights) {
+  const p = "month";
+  document.getElementById("mixHint").textContent = `Each stage as % of time asleep, per ${p}`;
+  const groups = groupBy(nights, p), keys = [...groups.keys()].sort();
+  const stages = ["deep", "core", "rem", "unspecified"];
+  const data = keys.map(k => {
+    const g = groups.get(k), tot = g.reduce((s, n) => s + n.total, 0);
+    return Object.fromEntries(stages.map(s => [s, tot ? g.reduce((a, n) => a + n[s], 0) / tot * 100 : 0]));
+  });
+  const shown = stages.filter(s => s !== "unspecified" || data.some(d => d.unspecified > 0.5));
+  const base = baseOption();
+  chart("mixChart").setOption({
+    ...base,
+    grid: { ...base.grid, right: 28 },
+    legend: { ...base.legend, data: shown.map(s => METRICS[s].label) },
+    tooltip: {
+      ...base.tooltip, trigger: "axis",
+      formatter: ps => !Array.isArray(ps) ? (ps.data?.evDate ? `<b>${ps.name}</b><br><span style="color:${css("--muted")}">Click to compare before &amp; after</span>` : "") : `<div style="font-weight:600;margin-bottom:4px">${periodLabel(keys[ps[0].dataIndex], p)}</div>` +
+        ps.slice().reverse().map(x => dotRow(x.color, x.seriesName, `${x.value.toFixed(1)}%`)).join(""),
+    },
+    xAxis: ax({ type: "category", boundaryGap: false, data: keys.map(k => periodLabel(k, p)), splitLine: { show: false }, axisLabel: { ...base._axis.axisLabel, hideOverlap: true } }),
+    yAxis: ax({ type: "value", max: 100, axisLabel: { ...base._axis.axisLabel, formatter: "{value}%" } }),
+    series: shown.map(s => ({
+      name: METRICS[s].label, type: "line", stack: "mix", symbol: "none", smooth: 0.15,
+      data: data.map(d => d[s]), lineStyle: { width: 2, color: css("--surface") },
+      areaStyle: { color: colorOf(s), opacity: 0.9 }, itemStyle: { color: colorOf(s) },
+      emphasis: { focus: "series" },
+      markLine: s === shown[shown.length - 1] ? periodEventLines(keys, p) : undefined,
+    })),
+  }, true);
+  chart("mixChart").off("click");
+  chart("mixChart").on("click", onEventClick);
+}
+
+/* ======================= calendar ======================= */
+function renderCalendar(nights) {
+  const key = state.metrics.includes(state.calMetric) ? state.calMetric : state.metrics[0];
+  fillSelect("calMetric", key, v => { state.calMetric = v; update(); });
+  document.getElementById("calTitle").textContent = `${METRICS[key].label} — calendar`;
+  const cEl = document.getElementById("calChart");
+  if (!nights.length) { chart("calChart").clear(); return; }
+  const from = nights[0].d, to = nights[nights.length - 1].d;
+  const years = [...new Set(nights.map(n => n.d.slice(0, 4)))];
+  // one row per year-segment: split long ranges into per-year calendars
+  const ranges = years.map(y => [y === from.slice(0, 4) ? from : `${y}-01-01`, y === to.slice(0, 4) ? to : `${y}-12-31`]);
+  const rowH = 150;
+  cEl.style.height = Math.max(200, ranges.length * rowH + 60) + "px";
+  const c = chart("calChart");
+  c.resize();
+  const cell = Math.max(8, Math.min(22, (cEl.clientWidth - 70) / 53));
+  const data = nights.map(n => [n.d, toDisplay(rawValue(n, key), key)]).filter(d => d[1] != null);
+  const vs = data.map(d => d[1]).sort((a, b) => a - b);
+  const r = ramp();
+  const base = baseOption();
+  const better = METRICS[key].better;
+  c.setOption({
+    ...base,
+    tooltip: { ...base.tooltip, formatter: x => `<b>${periodLabel(x.data[0], "night")}</b><br>${METRICS[key].label}: <b>${fmt(fromDisplay(x.data[1], key), key)}</b>` },
+    visualMap: {
+      type: "continuous", seriesIndex: ranges.map((_, i) => i), min: quantile(vs, .03), max: quantile(vs, .97), calculable: true, orient: "horizontal",
+      left: "center", bottom: 0, itemHeight: 220, itemWidth: 10,
+      inRange: { color: better < 0 ? [...r].reverse() : r }, textStyle: { color: css("--muted") },
+      formatter: v => fmt(fromDisplay(v, key), key, { short: true }),
+    },
+    calendar: ranges.map((rg, i) => ({
+      range: rg, top: 30 + i * rowH, left: 46, cellSize: [cell, 15],
+      itemStyle: { color: css("--surface-2"), borderColor: css("--surface"), borderWidth: 2 },
+      splitLine: { show: false }, yearLabel: { show: true, position: "left", color: css("--muted"), fontSize: 12 },
+      dayLabel: { firstDay: 1, color: css("--muted"), fontSize: 10, nameMap: ["S", "M", "T", "W", "T", "F", "S"] },
+      monthLabel: { color: css("--muted"), fontSize: 11 },
+    })),
+    series: [...ranges.map((rg, i) => ({
+      type: "heatmap", coordinateSystem: "calendar", calendarIndex: i,
+      data: data.filter(d => d[0] >= rg[0] && d[0] <= rg[1]),
+      emphasis: { itemStyle: { borderColor: css("--ink"), borderWidth: 1.5 } },
+    })), ...ranges.map((rg, i) => ({
+      type: "scatter", coordinateSystem: "calendar", calendarIndex: i, symbol: "circle", symbolSize: 7, z: 5,
+      data: allEvents().filter(e => e.date >= rg[0] && e.date <= rg[1]).map(e => ({ value: [e.date, 0], label: e.label })),
+      itemStyle: { color: css("--ink"), borderColor: css("--surface"), borderWidth: 1.5 },
+      tooltip: { formatter: x => `<b>${x.data.label}</b> · ${fmtDay(x.data.value[0])}<br><span style="color:${css("--muted")}">Click to compare before &amp; after</span>` },
+    }))],
+  }, true);
+  c.off("click");
+  c.on("click", x => {
+    if (!x.data) return;
+    if (x.data.label) selectEvent(x.data.value[0]);
+    else showNight(x.data[0], true);
+  });
+}
+
+/* ======================= day of week ======================= */
+function renderDow(nights) {
+  const base = baseOption();
+  const key0 = state.metrics[0];
+  const series = [];
+  for (const key of state.metrics) {
+    const by = DOW.map((_, i) => stats(nights.filter(n => n.dow === i), key));
+    const c = colorOf(key);
+    series.push({
+      name: METRICS[key].label, type: "bar", barMaxWidth: 26, barGap: "20%",
+      data: by.map((s, i) => ({ value: toDisplay(s.mean, key), s, key })),
+      itemStyle: { color: c, borderRadius: [4, 4, 0, 0] },
+    });
+    series.push({
+      name: METRICS[key].label + " IQR", type: "custom", z: 5, silent: true,
+      renderItem: (params, api) => {
+        const i = params.dataIndex, s = by[i];
+        if (s.q1 == null) return null;
+        const nSeries = state.metrics.length, idx = state.metrics.indexOf(key);
+        const band = api.size([1, 0])[0], barW = Math.min(26, band * 0.8 / nSeries);
+        const off = (idx - (nSeries - 1) / 2) * barW * 1.2;
+        const x = api.coord([i, 0])[0] + off;
+        const y1 = api.coord([i, toDisplay(s.q1, key)])[1], y2 = api.coord([i, toDisplay(s.q3, key)])[1];
+        return { type: "group", children: [
+          { type: "line", shape: { x1: x, y1, x2: x, y2 }, style: { stroke: css("--ink"), lineWidth: 1.5, opacity: .7 } },
+          { type: "line", shape: { x1: x - 4, y1, x2: x + 4, y2: y1 }, style: { stroke: css("--ink"), lineWidth: 1.5, opacity: .7 } },
+          { type: "line", shape: { x1: x - 4, y1: y2, x2: x + 4, y2 }, style: { stroke: css("--ink"), lineWidth: 1.5, opacity: .7 } },
+        ] };
+      },
+      data: DOW.map((_, i) => i),
+    });
+  }
+  const u = unitOf(key0);
+  const allVals = state.metrics.flatMap(k => DOW.map((_, i) => stats(nights.filter(n => n.dow === i), k))).flatMap(s => [s.q1, s.q3]).filter(v => v != null);
+  const yMin = u === "clock" ? Math.floor(Math.min(...allVals) / 30) * 30 - 30 : 0;
+  const yMax = u === "clock" ? Math.ceil(Math.max(...allVals) / 30) * 30 + 30 : null;
+  chart("dowChart").setOption({
+    ...base,
+    legend: { ...base.legend, show: state.metrics.length > 1, data: state.metrics.map(k => METRICS[k].label) },
+    tooltip: {
+      ...base.tooltip, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: "rgba(127,127,127,.08)" } },
+      formatter: ps => `<div style="font-weight:600;margin-bottom:4px">${DOW[ps[0].dataIndex]} nights · ${ps[0].data.s.n}</div>` +
+        ps.filter(x => x.data && x.data.s).map(x => dotRow(x.color, x.seriesName, `${fmt(x.data.s.mean, x.data.key)} <span style="color:${css("--muted")}">(IQR ${fmt(x.data.s.q1, x.data.key, { short: true })}–${fmt(x.data.s.q3, x.data.key, { short: true })})</span>`)).join(""),
+    },
+    xAxis: ax({ type: "category", data: DOW, splitLine: { show: false } }),
+    yAxis: ax({ type: "value", min: u === "clock" ? yMin : 0, max: u === "clock" ? yMax : null,
+      axisLabel: { ...base._axis.axisLabel, formatter: tick(key0) } }),
+    series,
+  }, true);
+}
+
+/* ======================= hypnogram ======================= */
+function showNight(d, scroll) {
+  if (!BY_DATE.has(d)) {
+    // snap to the nearest recorded night
+    const t = new Date(d + "T12:00:00").getTime();
+    d = NIGHTS.reduce((b, n) => Math.abs(n.t - t) < Math.abs(b.t - t) ? n : b).d;
+  }
+  state.night = d;
+  if (state.tab !== "sleep") { state.tab = "sleep"; update(); }
+  saveState();
+  renderHypnogram();
+  if (scroll) document.getElementById("hypChart").closest(".card").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+function renderHypnogram() {
+  const d = state.night && BY_DATE.has(state.night) ? state.night : NIGHTS[NIGHTS.length - 1].d;
+  const n = NIGHTS[BY_DATE.get(d)];
+  const segs = (DATA.segments[d] || []).slice().sort((a, b) => a[0] - b[0]);
+  document.getElementById("hypDate").value = d;
+  document.getElementById("hypDate").min = isoDate(FIRST);
+  document.getElementById("hypDate").max = isoDate(LAST);
+  const evNight = allEvents().filter(e => e.date === d).map(e => e.label).join(", ");
+  document.getElementById("hypTitle").textContent = `Night of ${periodLabel(d, "night")}${evNight ? " · " + evNight : ""}`;
+  const mk = (k, v) => `<span>${k} <b>${v}</b></span>`;
+  document.getElementById("hypStats").innerHTML = [
+    mk("Asleep", hm(n.total)), mk("In bed", hm(n.inbed)), mk("Bed", clock(n.bed)), mk("Up", clock(n.wake)),
+    mk("Deep", `${hm(n.deep)} (${pct(n.deep, n.total)})`), mk("Core", `${hm(n.core)} (${pct(n.core, n.total)})`),
+    mk("REM", `${hm(n.rem)} (${pct(n.rem, n.total)})`), mk("Awake", `${hm(n.awake)} · ${n.awakeN}×`),
+    mk("Efficiency", n.eff == null ? "–" : `${n.eff.toFixed(0)}%`),
+  ].join("");
+
+  const rows = ["deep", "core", "rem", "awake"]; // bottom -> top, Apple Health order
+  const hasUnsp = segs.some(s => SEG_STAGE[s[2]] === "unspecified");
+  if (hasUnsp) rows.splice(2, 0, "unspecified");
+  const base = baseOption();
+  const noon = new Date(d + "T12:00:00").getTime();
+  const data = segs.map(s => {
+    const st = SEG_STAGE[s[2]];
+    return { value: [rows.indexOf(st), noon + s[0] * 60000, noon + (s[0] + s[1]) * 60000, s[1]], itemStyle: { color: colorOf(st) }, stage: st };
+  }).filter(x => x.value[0] >= 0);
+  const xs = data.flatMap(x => [x.value[1], x.value[2]]);
+  chart("hypChart").setOption({
+    ...base,
+    grid: { ...base.grid, top: 12, left: 8, right: 16 },
+    tooltip: { ...base.tooltip, formatter: x => `${dotRow(colorOf(x.data.stage), METRICS[x.data.stage].label, hm(x.value[3]))}<div style="color:${css("--muted")};margin-top:2px">${hhmm(x.value[1])} – ${hhmm(x.value[2])}</div>` },
+    xAxis: ax({ type: "time", min: Math.min(...xs), max: Math.max(...xs), splitLine: { show: true, lineStyle: { color: css("--grid") } }, axisLabel: { ...base._axis.axisLabel, formatter: v => hhmm(v) } }),
+    yAxis: ax({ type: "category", data: rows.map(r => METRICS[r].label), splitLine: { show: false }, axisLine: { show: false } }),
+    series: [{
+      type: "custom", data,
+      renderItem: (params, api) => {
+        const y = api.coord([api.value(1), api.value(0)])[1];
+        const x1 = api.coord([api.value(1), 0])[0], x2 = api.coord([api.value(2), 0])[0];
+        const h = api.size([0, 1])[1] * 0.62;
+        return { type: "rect", shape: { x: x1, y: y - h / 2, width: Math.max(1.5, x2 - x1 - 1), height: h, r: 3 }, style: api.style() };
+      },
+      encode: { x: [1, 2], y: 0 },
+    }],
+  }, true);
+}
+const hm = m => { m = Math.round(m); return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m` : `${m}m`; };
+const pct = (a, b) => (b ? `${Math.round(a / b * 100)}%` : "–");
+const hhmm = t => new Date(t).toTimeString().slice(0, 5);
+function stepNight(dir) {
+  const i = BY_DATE.get(state.night && BY_DATE.has(state.night) ? state.night : NIGHTS[NIGHTS.length - 1].d) + dir;
+  if (i >= 0 && i < NIGHTS.length) showNight(NIGHTS[i].d);
+}
+document.getElementById("hypPrev").onclick = () => stepNight(-1);
+document.getElementById("hypNext").onclick = () => stepNight(1);
+document.getElementById("hypDate").addEventListener("change", e => e.target.value && showNight(e.target.value));
+document.addEventListener("keydown", e => {
+  if (e.target.closest?.("input, select, textarea, .popover") || state.tab !== "sleep") return;
+  if (e.key === "ArrowLeft") stepNight(-1);
+  if (e.key === "ArrowRight") stepNight(1);
+});
+
+/* ======================= shared helpers for the new tabs ======================= */
+const OUTCOMES = ["total", "deep", "rem", "hrv", "rhr"];
+const OUTCOME_LABEL = { total: "Total sleep", deep: "Deep", rem: "REM", hrv: "HRV", rhr: "Resting HR" };
+const OUTCOME_WORD = { total: "total sleep", deep: "deep sleep", rem: "REM sleep", hrv: "HRV", rhr: "resting heart rate" };
+// render durations in hours for long ones and minutes for short ones, whatever the Sleep tab's unit toggle says
+function inUnit(u, fn) {
+  const saved = state.unit;
+  state.unit = u;
+  try { return fn(); } finally { state.unit = saved; }
+}
+function withUnit(key, fn) {
+  const saved = state.unit;
+  state.unit = key === "total" || key === "core" ? "h" : "min";
+  try { return fn(); } finally { state.unit = saved; }
+}
+function outcomeSeg(id) {
+  segmented(document.getElementById(id), OUTCOMES.map(k => [k, OUTCOME_LABEL[k]]), state.outcome, v => { state.outcome = v; update(); });
+}
+function prevNights() {
+  const b = viewBounds(), span = b[1] - b[0];
+  return filtered([b[0] - span, b[0] - 1]);
+}
+function metricTile(key, nights, prev) {
+  return withUnit(key, () => {
+    const a = mean(vals(nights, key)), b = mean(vals(prev, key));
+    const c = vals(prev, key).length >= 3 ? change(a, b, key) : null;
+    return kpi(METRICS[key].label, fmt(a, key), c ? `<span class="delta ${c.cls}">${c.html}</span> vs ${prevLabel()}` : `${vals(nights, key).length} nights`);
+  });
+}
+function eventLinesInRange() {
+  const b = rangeBounds();
+  return allEvents().filter(e => e.t >= b[0] && e.t <= b[1]).map(e => eventLine({ xAxis: e.t }, e.label, e.date));
+}
+
+/* bars comparing an outcome across groups of nights; the first group is the baseline for the % labels */
+function barCompare(id, groups, key) {
+  withUnit(key, () => {
+    const base = baseOption(), c = colorOf(key);
+    const means = groups.map(g => (g.nights.length >= 5 ? mean(vals(g.nights, key)) : null));
+    const data = groups.map((g, i) => ({
+      value: means[i] == null ? null : toDisplay(means[i], key), n: g.nights.length,
+      ch: i > 0 && means[i] != null && means[0] != null ? change(means[i], means[0], key) : null,
+    }));
+    const cls = { good: css("--good"), bad: css("--bad"), flat: css("--muted") };
+    chart(id).setOption({
+      ...base,
+      grid: { ...base.grid, top: 40, bottom: 4 },
+      legend: { show: false },
+      tooltip: { ...base.tooltip, trigger: "item", formatter: x => withUnit(key, () => `<b>${groups[x.dataIndex].label}</b> · ${x.data.n} nights${dotRow(c, OUTCOME_LABEL[key] || METRICS[key].label, fmt(fromDisplay(x.data.value, key), key))}${x.data.ch ? `<span style="color:${cls[x.data.ch.cls]}">${x.data.ch.html} vs ${groups[0].label.toLowerCase()}</span>` : ""}`) },
+      xAxis: ax({ type: "category", data: groups.map(g => `${g.label}\n${g.nights.length} nights`), splitLine: { show: false }, axisLabel: { ...base._axis.axisLabel, lineHeight: 15, color: css("--ink-2") } }),
+      yAxis: ax({ type: "value", min: 0, axisLabel: { ...base._axis.axisLabel, formatter: tick(key) } }),
+      series: [{
+        type: "bar", barMaxWidth: 56, data: data.map((d, i) => ({ ...d, itemStyle: { color: c, opacity: i === 0 ? 0.55 : 1, borderRadius: [4, 4, 0, 0] } })),
+        label: {
+          show: true, position: "top", formatter: x => withUnit(key, () => x.data.value == null ? "{m|too few nights}" : `{v|${fmt(fromDisplay(x.data.value, key), key)}}${x.data.ch ? `\n{${x.data.ch.cls}|${x.data.ch.html}}` : ""}`),
+          rich: { v: { color: css("--ink"), fontWeight: 600, fontSize: 12.5, lineHeight: 17 }, m: { color: css("--muted"), fontSize: 11 },
+            good: { color: cls.good, fontSize: 11.5, fontWeight: 600 }, bad: { color: cls.bad, fontSize: 11.5, fontWeight: 600 }, flat: { color: cls.flat, fontSize: 11.5 } },
+        },
+      }],
+    }, true);
+  });
+}
+
+/* nightly dots + moving averages for one metric, with event lines and an optional "normal range" band */
+function miniTrend(id, key, nights, { mas = [7, 30], band = false } = {}) {
+  const base = baseOption(), c = colorOf(key);
+  const pts = nights.filter(n => n[key] != null).map(n => ({ x: n.t, v: n[key], k: n.d }));
+  const weekly = isLongRange();
+  let series;
+  if (weekly) {
+    // long ranges: one point per week keeps the trend readable
+    const wk = [...groupBy(nights.filter(n => n[key] != null), "week").entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+    series = [{ name: "Weekly average", type: "line", smooth: 0.25, showSymbol: false, symbolSize: 6,
+      data: wk.map(([k, g]) => [new Date(k + "T12:00:00").getTime(), mean(g.map(n => n[key])), null, k]),
+      lineStyle: { width: 2.5, color: c }, itemStyle: { color: c } }];
+    mas = [];
+  } else {
+    series = [{ name: "Nights", type: "scatter", data: pts.map(p => [p.x, p.v, p.k]), symbolSize: 5, itemStyle: { color: c, opacity: 0.4 }, emphasis: { scale: 1.8, itemStyle: { opacity: 1 } } }];
+  }
+  mas.forEach((w, i) => series.push({
+    name: `${w}-day average`, type: "line", data: movingAvg(pts, w, "night"), showSymbol: false, smooth: 0.2,
+    lineStyle: { width: i ? 1.5 : 2.5, color: c, type: i ? [6, 4] : "solid" }, itemStyle: { color: c },
+    endLabel: { show: true, formatter: () => `${w}d`, color: css("--ink-2"), fontSize: 11 },
+  }));
+  if (band && pts.length > 10) {
+    const s = pts.map(p => p.v).sort((a, b) => a - b);
+    series[0].markArea = { silent: true, itemStyle: { color: c, opacity: 0.1 }, label: { show: false },
+      data: [[{ yAxis: quantile(s, .25) }, { yAxis: quantile(s, .75) }]] };
+    if (band === "hint") document.getElementById(id + "Range").textContent = `${fmt(quantile(s, .25), key)} – ${fmt(quantile(s, .75), key)}`;
+  }
+  const lines = eventLinesInRange();
+  if (lines.length) series[0].markLine = { symbol: "none", data: lines, emphasis: { disabled: true } };
+  const c2 = chart(id);
+  c2.setOption({
+    ...base,
+    grid: { ...base.grid, top: (lines.length ? 30 : 10) + (series.length > 1 ? 26 : 0), right: 36 },
+    legend: { ...base.legend, show: series.length > 1, data: series.map(s => s.name) },
+    tooltip: { ...base.tooltip, trigger: weekly ? "axis" : "item", axisPointer: { type: "line", lineStyle: { color: css("--axis") } }, formatter: x => {
+      if (Array.isArray(x)) x = x[0];
+      if (x.componentType === "markLine") return trendTooltip(x, []);
+      if (x.data[3]) return `<b>${periodLabel(x.data[3], "week")}</b>${dotRow(c, "Weekly average", fmt(x.data[1], key))}`;
+      const d = x.data[2] ? periodLabel(x.data[2], "night") : new Date(x.data[0]).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+      return `<b>${d}</b>${dotRow(c, x.seriesName === "Nights" ? METRICS[key].label : x.seriesName, fmt(x.data[1], key), x.seriesName !== "Nights")}${x.data[2] ? `<span style="color:${css("--muted")}">Click for night detail</span>` : ""}`;
+    } },
+    xAxis: ax({ type: "time", splitLine: { show: false }, axisLabel: { ...base._axis.axisLabel, hideOverlap: true } }),
+    yAxis: ax({ type: "value", scale: true, axisLabel: { ...base._axis.axisLabel, formatter: tick(key) } }),
+    series,
+  }, true);
+  c2.off("click");
+  c2.on("click", x => { if (!onEventClick(x) && x.data && x.data[2]) showNight(x.data[2], true); });
+}
+
+/* ======================= Habits tab ======================= */
+function habitDefs(target) {
+  const wk = n => n.wN > 0;
+  return [
+    { title: `In bed by ${clock(target)}`, desc: "vs later nights", A: n => n.bed <= target, B: n => n.bed > target, track: n => n.bed <= target },
+    { title: "Workout days", desc: "vs rest days", A: wk, B: n => n.wN === 0, track: wk },
+    { title: "Morning workouts", desc: "vs evening workouts (17:00+)", A: n => n.wTiming === "morning", B: n => n.wTiming === "evening" },
+    { title: "30+ exercise minutes", desc: "Apple exercise minutes that day, vs fewer", A: n => n.exMin >= 30, B: n => n.exMin < 30 },
+  ];
+}
+function renderHabits(nights) {
+  const key = state.outcome, target = goalOf("bed") ?? 660;
+  outcomeSeg("habitOutcome");
+
+  const m = METRICS[key];
+  const cards = withUnit(key, () => habitDefs(target).map(h => {
+    const a = nights.filter(h.A), b = nights.filter(h.B);
+    const va = vals(a, key), vb = vals(b, key);
+    const ma = mean(va), mb = mean(vb);
+    const enough = va.length >= 8 && vb.length >= 8;
+    const ch = enough ? change(ma, mb, key) : null;
+    const rel = enough && mb ? (ma - mb) / Math.abs(mb) : 0;
+    return { h, ch, enough, score: enough ? (m.better || 1) * rel : -Infinity, ma, mb, na: va.length, nb: vb.length, freq: nights.length ? a.length / nights.length : 0 };
+  }));
+  cards.sort((x, y) => y.score - x.score);
+
+  const best = cards.find(c => c.enough && c.ch && c.ch.cls === "good");
+  document.getElementById("habitHeadline").innerHTML = best
+    ? `Your strongest habit for <b>${OUTCOME_WORD[key]}</b>: <b>${best.h.title.toLowerCase()}</b>, worth <span class="delta good">${best.ch.html.replace(/^[▲▼] /, "")}</span>${best.freq < 0.5 ? `. You did it on ${Math.round(best.freq * 100)}% of nights, so there's room to do it more.` : ". Keep it up."}`
+    : `No habit stands out for <b>${OUTCOME_WORD[key]}</b> in this range yet. Try a longer date range.`;
+
+  document.getElementById("habitCards").replaceChildren(...cards.map(c => withUnit(key, () => {
+    const d = el("div", { className: "habit" + (c.enough ? "" : " dim") });
+    d.innerHTML = `<div class="h-title">${c.h.title}<span class="h-desc">${c.h.desc}</span></div>` +
+      (c.enough
+        ? `<div class="h-effect ${c.ch.cls}">${c.ch.html.replace(/^[▲▼■] /, "")}</div><div class="h-what">${OUTCOME_WORD[key]}</div>
+           <div class="h-detail">${fmt(c.ma, key)} vs ${fmt(c.mb, key)} · ${c.na} vs ${c.nb} nights</div>
+           <div class="h-freq">You did this on ${Math.round(c.freq * 100)}% of nights${Math.min(c.na, c.nb) < 20 ? " · small sample" : ""}</div>`
+        : `<div class="h-effect flat" style="font-size:16px;margin-top:14px">Not enough nights yet</div><div class="h-freq">${c.na} vs ${c.nb} nights (need 8+ each)</div>`);
+    return d;
+  })));
+  renderTracker(nights, target);
+}
+function renderTracker(nights, target) {
+  const last = Math.min(viewBounds()[1] - DAY / 2, LAST); // a local-noon timestamp, so its ISO date is the right day
+  const days = Array.from({ length: 28 }, (_, i) => isoDate(last - (27 - i) * DAY));
+  const rows = [
+    ...habitDefs(target).filter(h => h.track).map(h => ({ label: h.title, done: h.track })),
+    { label: "7h+ asleep", done: n => n.total >= 420 },
+  ];
+  document.getElementById("trackerHint").textContent = `${fmtDay(days[0])} – ${fmtDay(days[27])}. Streaks count back from the latest night.`;
+  const cells = [el("div")];
+  for (const d of days) {
+    const dt = new Date(d + "T12:00:00"), dow = (dt.getDay() + 6) % 7;
+    cells.push(el("div", { className: "tk-day" + (dow === 0 ? " wk" : ""), textContent: dow === 0 ? dt.getDate() : DOW[dow][0], title: fmtDay(d) }));
+  }
+  cells.push(el("div"));
+  const inRange = new Set(nights.map(n => n.d));
+  for (const r of rows) {
+    cells.push(el("div", { className: "tk-label", textContent: r.label }));
+    let streak = 0, counting = true;
+    const states = days.map(d => {
+      const n = inRange.has(d) ? NIGHTS[BY_DATE.get(d)] : null;
+      return n ? !!r.done(n) : null;
+    });
+    for (let i = states.length - 1; i >= 0; i--) {
+      if (states[i] === null && i === states.length - 1) continue; // tonight not recorded yet
+      if (states[i] && counting) streak++; else counting = false;
+    }
+    let best = 0, run = 0;
+    for (const n of nights) { run = r.done(n) ? run + 1 : 0; best = Math.max(best, run); }
+    days.forEach((d, i) => {
+      const s = states[i];
+      cells.push(el("div", { className: "tk-cell" + (s === null ? " na" : s ? " on" : ""), title: `${fmtDay(d)}: ${s === null ? "no data" : s ? "done" : "not done"}` }));
+    });
+    const hit = states.filter(s => s).length, rec = states.filter(s => s !== null).length;
+    const st = el("div", { className: "tk-streak" });
+    st.innerHTML = `${streak ? `<b>${streak}</b>-night streak` : "No streak yet"} · best ${best}<br>${hit} of ${rec} nights`;
+    cells.push(st);
+  }
+  document.getElementById("tracker").replaceChildren(...cells);
+}
+
+/* ======================= Exercise tab ======================= */
+const WORKOUT_GROUPS = [["strength", "Strength"], ["running", "Running"], ["cardio", "Other cardio"], ["walking", "Walking"]];
+function renderExercise(nights) {
+  const wb = document.getElementById("walksBtn");
+  wb.setAttribute("aria-pressed", String(!!state.walks));
+  wb.onclick = () => { state.walks = !state.walks; update(); };
+
+  const b = viewBounds(), span = b[1] - b[0], days = Math.max(1, Math.round(span / DAY));
+  const dows = new Set(state.dow);
+  const inB = (lo, hi) => usedWorkouts().filter(w => w.t >= lo && w.t <= hi && dows.has((new Date(w.t).getDay() + 6) % 7));
+  const ws = inB(b[0], b[1]), pws = inB(b[0] - span, b[0] - 1);
+  const weeks = days / 7;
+  const perWeek = ws.length / weeks, prevPerWeek = pws.length / weeks;
+  const minPerWeek = ws.reduce((s, w) => s + w.dur, 0) / weeks, prevMinPerWeek = pws.reduce((s, w) => s + w.dur, 0) / weeks;
+  const delta = (x, y) => (y ? `<span class="delta ${x >= y ? "good" : "bad"}">${x >= y ? "▲ +" : "▼ −"}${Math.abs((x - y) / y * 100).toFixed(0)}%</span> vs ${prevLabel()}` : "");
+  const slots = { morning: 0, afternoon: 0, evening: 0 };
+  ws.forEach(w => slots[timingOf(w.start)]++);
+  const topSlot = Object.entries(slots).sort((a, b) => b[1] - a[1])[0];
+  const hhmm = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(Math.round(m % 60)).padStart(2, "0")}`;
+  const activeDays = new Set(ws.map(w => w.d)).size;
+  document.getElementById("exKpis").replaceChildren(
+    kpi("Workouts per week", perWeek.toFixed(1), pws.length ? delta(perWeek, prevPerWeek) : `${ws.length} workouts`),
+    kpi("Training per week", hm(minPerWeek), pws.length ? delta(minPerWeek, prevMinPerWeek) : `average ${ws.length ? hm(minPerWeek / perWeek) : "–"} a session`),
+    kpi("Usually trains", ws.length ? topSlot[0][0].toUpperCase() + topSlot[0].slice(1) : "–",
+      ws.length ? `${Math.round(topSlot[1] / ws.length * 100)}% of workouts · typically ${hhmm(quantile(ws.filter(w => timingOf(w.start) === topSlot[0]).map(w => w.start).sort((a, b) => a - b), 0.5))}` : ""),
+    kpi("Active days", `${Math.round(activeDays / days * 100)}%`, `${activeDays} of ${days} days`),
+  );
+
+  renderExCalendar(ws, b);
+  renderExWeekly(ws, b);
+  renderExTime(ws);
+
+  const key = state.outcome;
+  outcomeSeg("exOutcome");
+  barCompare("exTimingChart", [
+    { label: "Rest day", nights: nights.filter(n => n.wN === 0) },
+    { label: "Morning", nights: nights.filter(n => n.wTiming === "morning") },
+    { label: "Afternoon", nights: nights.filter(n => n.wTiming === "afternoon") },
+    { label: "Evening", nights: nights.filter(n => n.wTiming === "evening") },
+  ], key);
+}
+
+/* which days you trained: a calendar shaded by training time */
+function renderExCalendar(ws, b) {
+  const byDay = new Map();
+  for (const w of ws) (byDay.get(w.d) || byDay.set(w.d, []).get(w.d)).push(w);
+  const toT = Math.min(b[1] - DAY / 2, LAST);
+  // on narrow screens show only the latest weeks that fit at a readable square size
+  const fitWeeks = Math.floor((document.getElementById("exCalChart").clientWidth - 60) / 14);
+  const narrow = document.getElementById("exCalChart").clientWidth < 600;
+  const fromT = Math.max(b[0] + DAY / 2, FIRST, narrow ? toT - (fitWeeks * 7 - 7) * DAY : -Infinity);
+  const from = isoDate(fromT), to = isoDate(toT);
+  document.getElementById("exCalHint").textContent = narrow && fromT > Math.max(b[0] + DAY / 2, FIRST)
+    ? `Last ${fitWeeks - 1} weeks. Each square is a day; the colour shows how long you trained.`
+    : "Each square is a day; the colour shows how long you trained. Hover for details.";
+  const years = [];
+  for (let y = +from.slice(0, 4); y <= +to.slice(0, 4); y++) years.push(String(y));
+  // up to a year fits in one continuous strip; longer ranges get one row per year
+  const ranges = toT - fromT <= 371 * DAY ? [[from, to]]
+    : years.map(y => [y === from.slice(0, 4) ? from : `${y}-01-01`, y === to.slice(0, 4) ? to : `${y}-12-31`]);
+  const rowH = 150, cEl = document.getElementById("exCalChart");
+  cEl.style.height = Math.max(200, ranges.length * rowH + 50) + "px";
+  const c = chart("exCalChart");
+  c.resize();
+  const weeksShown = Math.min(53, Math.ceil((new Date(to) - new Date(from)) / DAY / 7) + 2);
+  // fit the whole range across the card (squares shrink on narrow screens rather than overflowing)
+  const cell = Math.max(8, Math.min(30, (cEl.clientWidth - 60) / (narrow ? weeksShown : Math.max(weeksShown, 26))));
+  const rowH2 = cell * 7 + 50;
+  cEl.style.height = Math.max(200, ranges.length * rowH2 + 50) + "px";
+  c.resize();
+  const data = [...byDay.entries()].map(([d, list]) => [d, Math.round(list.reduce((s, w) => s + w.dur, 0))]);
+  const r = ramp(), base = baseOption();
+  const pretty = s => s.replace(/([a-z])([A-Z])/g, "$1 $2").replace("Traditional ", "").replace("Functional ", "Functional ");
+  c.setOption({
+    ...base,
+    tooltip: { ...base.tooltip, formatter: x => {
+      const list = byDay.get(x.data[0]) || [];
+      return `<b>${fmtDay(x.data[0])}</b> · ${hm(x.data[1])}` + list.map(w => dotRow(css(`--c-${w.group}`), `${String(Math.floor(w.start / 60)).padStart(2, "0")}:${String(w.start % 60).padStart(2, "0")} ${pretty(w.type)}`, hm(w.dur))).join("");
+    } },
+    visualMap: {
+      type: "piecewise", seriesIndex: ranges.map((_, i) => i), orient: "horizontal", left: "center", bottom: 0, itemWidth: 14, itemHeight: 14, itemGap: 14,
+      pieces: [{ min: 1, max: 29, label: "under 30m" }, { min: 30, max: 59, label: "30–60m" }, { min: 60, max: 89, label: "60–90m" }, { min: 90, label: "90m+" }],
+      inRange: { color: [r[2], r[3], r[4], r[6]] }, textStyle: { color: css("--muted") },
+    },
+    calendar: ranges.map((rg, i) => ({
+      range: rg, top: 30 + i * rowH2, left: 46, cellSize: [cell, cell],
+      itemStyle: { color: css("--surface-2"), borderColor: css("--surface"), borderWidth: 2 },
+      splitLine: { show: false }, yearLabel: { show: ranges.length > 1, position: "left", color: css("--muted"), fontSize: 12 },
+      dayLabel: { firstDay: 1, color: css("--muted"), fontSize: 10, nameMap: ["S", "M", "T", "W", "T", "F", "S"] },
+      monthLabel: { color: css("--muted"), fontSize: 11 },
+    })),
+    series: ranges.map((rg, i) => ({ type: "heatmap", coordinateSystem: "calendar", calendarIndex: i, data: data.filter(d => d[0] >= rg[0] && d[0] <= rg[1]) })),
+  }, true);
+}
+
+/* training per week by type, with your weekly average marked; months (as hours per week) for long ranges */
+function renderExWeekly(ws, b) {
+  const per = (b[1] - b[0]) / DAY > 200 ? "month" : "week";
+  const keyOfW = per === "month" ? w => isoDate(w.t).slice(0, 7) : w => isoDate(w.t - ((new Date(w.t).getDay() + 6) % 7) * DAY);
+  const groups = WORKOUT_GROUPS.filter(([g]) => state.walks || g !== "walking");
+  const sums = new Map(), dayCount = new Map(), keys = [];
+  for (let t = b[0] + DAY / 2; t <= b[1]; t += DAY) {
+    if (t < FIRST - DAY) continue;
+    const k = keyOfW({ t });
+    if (!sums.has(k)) { sums.set(k, Object.fromEntries(groups.map(([g]) => [g, 0]))); keys.push(k); }
+    dayCount.set(k, (dayCount.get(k) || 0) + 1);
+  }
+  for (const w of ws) { const k = keyOfW(w); if (sums.has(k)) sums.get(k)[w.group] += w.dur; }
+  // minutes per week: months are scaled by the number of days they cover in the range
+  const perWeek = (k, g) => sums.get(k)[g] / (per === "month" ? dayCount.get(k) / 7 : 1);
+  const avg = ws.reduce((s, w) => s + w.dur, 0) / (keys.reduce((s, k) => s + dayCount.get(k), 0) / 7 || 1);
+  document.getElementById("exWeeklyHint").textContent = per === "month"
+    ? `Average hours per week in each month. Dashed line: your average, ${hm(avg)} a week.`
+    : `Hours each week. Dashed line: your average, ${hm(avg)} a week.`;
+  const base = baseOption();
+  const wkStep = Math.max(...keys.map(k => groups.reduce((s, [g]) => s + perWeek(k, g), 0)), avg) > 480 ? 120 : 60;
+  chart("exWeeklyChart").setOption({
+    ...base,
+    grid: { ...base.grid, top: 40, right: 24 },
+    legend: { ...base.legend, data: groups.map(([, l]) => l) },
+    tooltip: { ...base.tooltip, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: "rgba(127,127,127,.08)" } },
+      formatter: ps => !Array.isArray(ps) ? "" : `<b>${periodLabel(keys[ps[0].dataIndex], per)}</b>${per === "month" ? " · per week" : ""}` + ps.slice().reverse().filter(x => x.value).map(x => dotRow(x.color, x.seriesName, hm(x.value))).join("") + `<div style="color:${css("--muted")};margin-top:2px">Total ${hm(ps.reduce((s, x) => s + (x.value || 0), 0))}</div>` },
+    xAxis: ax({ type: "category", data: keys.map(k => per === "month" ? new Date(k + "-01T12:00").toLocaleDateString(undefined, { month: "short" }) + (k.endsWith("-01") ? ` ${k.slice(2, 4)}` : "") : periodLabel(k, "week")), splitLine: { show: false }, axisLabel: { ...base._axis.axisLabel, hideOverlap: true } }),
+    yAxis: ax({ type: "value", interval: wkStep, max: v => Math.ceil(v.max / wkStep) * wkStep,
+      axisLabel: { ...base._axis.axisLabel, formatter: v => `${v / 60}h` } }),
+    series: groups.map(([g, l], i) => ({
+      name: l, type: "bar", stack: "w", barMaxWidth: per === "month" ? 30 : 16, data: keys.map(k => Math.round(perWeek(k, g))),
+      itemStyle: { color: css(`--c-${g}`), borderColor: css("--surface"), borderWidth: 1 },
+      markLine: i === 0 ? { symbol: "none", silent: true, data: [{ yAxis: avg, label: { formatter: `avg ${hm(avg)}`, position: "insideEndTop", color: css("--ink-2") }, lineStyle: { color: css("--ink-2"), type: [5, 4], width: 1.5 } }] } : undefined,
+    })),
+  }, true);
+}
+
+/* start times, one bar per hour */
+function renderExTime(ws) {
+  const hours = Array.from({ length: 24 }, () => 0);
+  ws.forEach(w => hours[Math.floor(w.start / 60)]++);
+  let lo = hours.findIndex(v => v > 0), hi = 23 - [...hours].reverse().findIndex(v => v > 0);
+  if (lo < 0) { lo = 6; hi = 22; }
+  const idx = Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
+  const base = baseOption(), total = ws.length || 1;
+  chart("exTimeChart").setOption({
+    ...base,
+    grid: { ...base.grid, top: 36, right: 12 },
+    legend: { show: false },
+    title: { show: false },
+    tooltip: { ...base.tooltip, trigger: "item", formatter: x => `<b>${String(idx[x.dataIndex]).padStart(2, "0")}:00–${String(idx[x.dataIndex] + 1).padStart(2, "0")}:00</b><br>${x.value} workouts (${Math.round(x.value / total * 100)}%)` },
+    xAxis: ax({ type: "category", data: idx.map(h => String(h).padStart(2, "0")), splitLine: { show: false }, axisLabel: { ...base._axis.axisLabel, interval: idx.length > 12 ? 1 : 0 } }),
+    yAxis: ax({ type: "value", minInterval: 1 }),
+    series: [{
+      type: "bar", barCategoryGap: "20%", data: idx.map(h => ({ value: hours[h], itemStyle: { color: css("--accent"), borderRadius: [4, 4, 0, 0] } })),
+      markArea: { silent: true, itemStyle: { color: "transparent" }, label: { color: css("--muted"), fontSize: 11, position: "insideTop" },
+        data: [["morning", 0, 12], ["afternoon", 12, 17], ["evening", 17, 24]]
+          .map(([n, a, z]) => [Math.max(a, lo), Math.min(z - 1, hi)]).map(([a, z], i) => (a <= z ? [{ xAxis: String(a).padStart(2, "0"), name: ["Morning", "Afternoon", "Evening"][i] }, { xAxis: String(z).padStart(2, "0") }] : null)).filter(Boolean) },
+    }],
+  }, true);
+}
+
+/* ======================= Heart tab ======================= */
+function renderHeart(nights) {
+  const prev = prevNights();
+  document.getElementById("heartKpis").replaceChildren(...["hrv", "rhr"].map(k => metricTile(k, nights, prev)));
+  miniTrend("hrvChart", "hrv", nights, { band: "hint", mas: [14] });
+  miniTrend("rhrChart", "rhr", nights, { mas: [14] });
+}
+document.getElementById("hrvHabitsLink").onclick = () => { state.tab = "habits"; state.outcome = "hrv"; update(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+/* ======================= tabs ======================= */
+const TABS = [["habits", "Habits"], ["sleep", "Sleep"], ["exercise", "Exercise"], ["heart", "Heart"]];
+function renderTabs() {
+  document.body.dataset.tab = state.tab;
+  document.getElementById("tabs").replaceChildren(...TABS.map(([k, l]) => {
+    const b = el("button", { type: "button", textContent: l });
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(state.tab === k));
+    b.onclick = () => { if (state.tab !== k) { state.tab = k; update(); } };
+    return b;
+  }));
+  for (const m of document.querySelectorAll("main.tab")) m.hidden = m.dataset.tab !== state.tab;
+}
+
+document.getElementById("moreCharts").addEventListener("toggle", e => {
+  if (!!state.moreOpen !== e.target.open) { state.moreOpen = e.target.open; update(); }
+});
+
+/* ======================= orchestration ======================= */
+function applyTheme() {
+  const t = state.theme || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  document.documentElement.dataset.theme = t;
+}
+function update({ keepTrend = false } = {}) {
+  if (!TABS.some(([k]) => k === state.tab)) state.tab = "habits";
+  saveState();
+  applyWorkouts();
+  renderTabs();
+  renderControls();
+  const nights = filtered();
+  renderCompare();
+  if (state.tab === "sleep") {
+    const outer = filtered(rangeBounds());
+    renderKpis(nights);
+    renderHighlights();
+    const emptyIds = ["trendChart", "bucketChart", "mixChart", "calChart", "dowChart"];
+    if (!nights.length) {
+      for (const id of emptyIds) chart(id).clear();
+      document.getElementById("kpis").innerHTML = `<div class="empty card">No nights match these filters.</div>`;
+    } else {
+      if (!keepTrend) renderTrend(outer, nights);
+      renderBuckets(nights);
+      renderMix(nights);
+      const mc = document.getElementById("moreCharts");
+      mc.open = !!state.moreOpen;
+      if (mc.open) { renderCalendar(nights); renderDow(nights); }
+    }
+    renderHypnogram();
+  } else if (state.tab === "habits") renderHabits(nights);
+  else if (state.tab === "exercise") renderExercise(nights);
+  else if (state.tab === "heart") renderHeart(nights);
+  // charts created while their tab was hidden need their size refreshed once visible
+  for (const k in charts) if (document.getElementById(k).offsetParent) charts[k].resize();
+}
+
+document.getElementById("themeBtn").onclick = () => {
+  state.theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(); resetCharts(); update();
+};
+document.getElementById("copyLink").onclick = async (e) => {
+  try { await navigator.clipboard.writeText(location.href); e.target.textContent = "Copied ✓"; }
+  catch { e.target.textContent = "Copy failed"; }
+  setTimeout(() => (e.target.textContent = "Copy view link"), 1600);
+};
+// resize charts immediately; re-render shortly after so size-dependent layouts (calendars) recompute
+let resizeTimer;
+window.addEventListener("resize", () => {
+  for (const k in charts) charts[k].resize();
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => update({ keepTrend: true }), 250);
+});
+window.addEventListener("hashchange", () => { state = loadState(); applyTheme(); resetCharts(); update(); });
+
+document.getElementById("subtitle").textContent =
+  `${NIGHTS.length} nights · ${WORKOUTS.length} workouts · ${fmtDay(NIGHTS[0].d)} → ${fmtDay(NIGHTS[NIGHTS.length - 1].d)}` +
+  (APP.webapp && APP.meta?.processedAt ? ` · updated ${APP.meta.processedAt}` : "");
+document.getElementById("footer").textContent = APP.webapp
+  ? `Source: ${DATA.source} · nights are labelled by the evening they start on · upload a new Health export any time.`
+  : `Source: ${DATA.source} · built ${DATA.generated} · nights are labelled by the evening they start on · re-run build_dashboard.py after a new Health export.`;
+if (APP.webapp) {
+  const ub = document.getElementById("uploadBtn");
+  ub.hidden = false;
+  // the upload widget is loaded on first use
+  ub.onclick = () => {
+    if (window.SleepUpload) return SleepUpload.open();
+    const s = document.createElement("script");
+    s.src = "/static/upload.js";
+    s.onload = () => SleepUpload.open();
+    document.head.append(s);
+  };
+}
+
+applyTheme();
+update();
+</script>
+</body>
+</html>

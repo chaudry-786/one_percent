@@ -1,0 +1,12 @@
+.git/
+.github/
+venv/
+__pycache__/
+*.pyc
+.store/
+export.zip
+*.zip
+*.parquet
+sleep_dashboard.html
+sleep_analysis.ipynb
+.ipynb_checkpoints/
