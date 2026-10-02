@@ -13,51 +13,28 @@ The dashboard runs on Cloud Run as the `one-percent` service. Its GCP setup live
 
 **How it works:**
 - `app.py` serves the dashboard with the latest processed data, signs the upload URL and processes the export.
-- `sleepdata.py` is the shared processing code, also used by the local build below.
+- `sleepdata.py` turns the export into nights, workouts and daily heart data.
 - Uploads are kept 30 days. Events (Options → Events) are saved on the server, so the phone and laptop see the same ones.
 
 **Run it locally:**
 ```
-venv/bin/pip install -r requirements.txt
-venv/bin/flask --app app run --debug        # http://127.0.0.1:5000, files stored in .store/, no login
+python3 -m venv venv && venv/bin/pip install -r requirements.txt
+./dev.sh        # http://127.0.0.1:5000, files stored in .store/, no login
 ```
-Set `APP_PASSPHRASE` and `COOKIE_KEY` to test the login.
+`dev.sh` downloads the Tailwind CLI into `.tools/` the first time, rebuilds `static/dist/app.css` whenever a template or script changes, and runs Flask. Set `APP_PASSPHRASE` and `COOKIE_KEY` to test the login, and `ACCENT_PROGRESS_FILE` to a copy of Accent Coach's `progress.json` to see the accent habit.
 
-**Deploy:** push to `main` or run the **Deploy to Cloud Run** workflow. It needs the repository variables `GCP_PROJECT_ID`, `GCP_WIF_PROVIDER` and `GCP_DEPLOYER_SA` from the infra repo's `terraform output`.
+**Deploy:** push to `main` or run the **Deploy to Cloud Run** workflow. It needs the repository variables `GCP_PROJECT_ID`, `GCP_WIF_PROVIDER` and `GCP_DEPLOYER_SA` from the infra repo's `terraform output`. The Docker build compiles the CSS, so `static/dist/` isn't committed.
 
-## Local file (no server)
+## How the page is built
 
-```
-xdg-open sleep_dashboard.html
-```
-
-Or double-click `sleep_dashboard.html`. There's no server; it's a single file. It needs an internet connection to load the charting library (ECharts, from cdnjs).
-
-### Rebuild with new data
-
-1. On your iPhone: **Health → profile picture → Export All Health Data**. This produces `export.zip`.
-2. Copy it over the existing `export.zip` in this folder.
-3. Run:
-   ```
-   venv/bin/python build_dashboard.py
-   ```
-4. Refresh the page.
-
-If it prints "Using cached records" after you've added a new export, the copied zip kept an old timestamp. Force a re-read with `--refresh`.
-
-#### Options
-
-| Flag | What it does |
-|---|---|
-| `--list-sources` | List devices/apps that recorded sleep, with record counts |
-| `--source "NAME"` | Use a different source (default: `Sabah’s Apple Watch`) |
-| `--refresh` | Re-extract from `export.zip` even if the cache looks current |
+- **Tailwind CSS** for styling (utility classes in the templates; a few shared components such as `.card` and `.btn` in `static/src/app.css`).
+- **Alpine.js** for state and interactivity (`static/js/app.js`): tabs, controls, sheets.
+- **ECharts** for charts and **Day.js** for dates, both from a CDN.
+- The server embeds the data as JSON in the page; there's nothing to fetch after load. Refreshing resets the view, and the light/dark choice is remembered.
 
 ## What's on the page
 
-To stay readable, charts summarise long ranges. Over about 4 months, nightly dots become moving-average or weekly lines, and pick 30d or 90d to see individual nights. Monthly charts replace weekly ones where bars would get crowded.
-
-The page has four tabs. The date range, Options (which nights, events) and the "Since <event>" card apply to all of them.
+Every tab starts with **At a glance** cards: a big number, a mini chart of the last weeks with a dashed line for your usual, and a plain-language "how it's going". A gold badge marks your best week of the year. Charts to explore come below.
 
 ### Habits
 
@@ -72,62 +49,44 @@ Four habits, each judged against a fixed target. There are no comparisons, just 
 
 Each card shows:
 - **The current streak**, using *Atomic Habits*' "never miss twice" rule: one missed day (or week) is forgiven, two in a row end the streak.
-- **Your best streak.**
-- **Today's status.**
-- **A 5-week chain:** coloured means done, grey means not done, hatched means no data.
-- **Your total "votes"** (every day the habit was done).
+- **Your best streak** and **today's status** (with a "Practise now" link for accent).
+- **A 5-week chain:** coloured means done, grey means not done, dashed means no data.
+- **Your total "votes"** (every day the habit was done) for the person you're becoming.
 
 A different *Atomic Habits* quote appears each day. Change the targets with **Targets**; they're saved on the server, so every device uses them.
 
-Accent minutes use the same estimate as Accent Coach's Analytics page, based on each practised clip's length. On Cloud Run, the app reads `progress.json` from Accent Coach's bucket (read-only). Locally, set `ACCENT_PROGRESS_FILE` to a copy of it.
+Accent minutes use the same estimate as Accent Coach's Analytics page, based on each practised clip's length. On Cloud Run, the app reads `progress.json` from Accent Coach's bucket (read-only).
 
 ### Sleep
 
-Everything under "Sleep tab" below. The metric picker also has HRV, Resting HR, Respiratory rate, Wrist temp, Exercise minutes and Workout time.
+- **At a glance:** deep sleep, wake-up time (with how many of the last 7 mornings hit your target) and wake-ups, each vs your usual (the 4 weeks before). Earlier wake-ups count as better.
+- **Explore:** pick a metric, date range and Nightly / Weekly / Monthly. **Options** has custom dates, which nights (weeknights, weekends, specific days) and events.
+  - **Trend:** a gold marker shows each year's best week/month (from all your data); a subtle hollow ring marks the high and low in view. **Tap a week or month** to see how common a value like it is in the range and when it last happened.
+  - **Night detail:** stage timeline for one night. Tap a dot or a calendar cell, or step with ‹ ›.
+  - **Stage mix:** each stage's share of sleep, per month.
+  - **More:** calendar heatmap and averages by night of the week.
 
 ### Exercise
 
-- **Summary tiles:** workouts per week, training time per week, when you usually train (morning, afternoon or evening, with a typical start time), and active days. Each is compared with the previous period.
-- **Workout days:** a calendar where each square is a day, coloured by how long you trained. Hover to see that day's workouts and start times. On a phone it shows the latest weeks that fit.
-- **Training per week:** hours by type, with your weekly average as a dashed line. Long ranges show each month's average week.
-- **What time you train:** workouts by start hour.
-- **Does training time affect your sleep?** Nights after a rest day vs a morning, afternoon or evening workout, for the outcome you pick.
-- **Count walks** includes walks as workouts (off by default).
+Walks don't count unless **Count walks** is on.
 
-Workouts count towards a night when they started that day before bedtime. When there are several, the longest one decides the time of day.
+- **At a glance:**
+  - **Training time** this week vs your usual week.
+  - **Consistency:** how many of the last 12 weeks hit your training-days target, and your streak.
+  - **Morning sessions:** workouts started before noon in the last 4 weeks.
+- **Workout days:** calendar coloured by how long you trained (tap for the workouts and start times). On a phone it shows the latest weeks that fit.
+- **Training per week:** hours by type, with your average as a dashed line. Long ranges show each month's average week.
+- **What time you train:** workouts by start hour, mornings in amber.
 
 ### Heart
 
-- **Overnight HRV** with your normal range (middle half of nights). "What raises my HRV?" opens Habits measured by HRV.
-- **Resting heart rate**, the morning after each night.
-
-### Sleep tab
-
-- **Top bar:**
-  - **Metric button:** opens a picker. Tick one or more sleep stages (Total, Deep, Core, REM, Unspecified, Awake) and choose hours / minutes / % of sleep, or pick a schedule metric (Time in bed, Efficiency, Wake-ups, Bedtime, Wake time, Midpoint).
-  - **Date range** presets and **Nightly / Weekly / Monthly**.
-- **Options:** custom dates, moving-average lines, which nights (weeknights, weekends, specific days), and goal. Active filters show as tags in the top bar; click × to clear one.
-- **Since <event> card:** hidden until you click an event (its label on a chart, its dot on the calendar, or its tag in Options → Events). It shows each key number averaged over the nights since the event, with its % change vs the same number of days before (up to 90).
-- **Records** (gold): for the metric and grouping you're viewing, your best week, month or night of this year, with its value and date. A **New** badge appears when it's the most recent period, along with the previous best it beat. Records use all your data, not just the selected range. A week needs 3+ nights and a month 10+ to count. On the trend chart, a gold marker shows each year's best.
-- **Summary tiles:** average, median, best/worst night, goal hit rate, and change vs the previous equal period. When several metrics are picked, tabs switch between them.
-- **Trend:** zooming with the slider narrows every other panel. There's a table view.
-  - **High and Low:** the highest and lowest points on the chart are marked with a small hollow ring and a muted label. In the Nightly view without dots, they mark the high and low of the moving average. If one of them is also a gold record, its label reads e.g. "High · Best of 2026".
-  - **Click a week or month** to see how common it was. The chart shades its value bucket (e.g. 50–60 min), highlights every other week in that bucket and fades the rest. A line above the chart says how many weeks in the range fell there (rare under 10%, uncommon under 25%, common under 50%, otherwise very common) and when it last happened. The bucket size is worked out from the spread of your values. **See its nights** drills into that week; click the point again or **Clear** to deselect.
-- **Nights by range:** "Edit ranges" lets you set your own edges, e.g. `30, 60, 90` or `23:30, 01:00`. This chart and Stage mix are always monthly.
-- **More charts** (collapsed): calendar heatmap and day-of-week averages.
-- **Night detail:** stage timeline for one night. Click a dot or calendar cell to open it; step with ← →.
-- **Copy view link:** the current view is stored in the URL, so links and bookmarks reopen it exactly.
+- **At a glance:** 7-day averages of HRV, resting heart rate and walking heart rate, vs your usual.
+- **HRV:** the average of all readings each day (not just overnight), with your normal range (middle half of days) shaded.
+- **Resting heart rate** and **walking heart rate** (average while walking; it drops as fitness improves).
 
 ## Events
 
-Events (e.g. a new mattress) appear as labelled lines on the charts, a dot on the calendar, and drive the "Since …" comparison card.
-
-- **Web app:** add and remove events under **Options → Events**. They're saved on the server (`data/events.json` in the bucket). The first time, they're seeded from `annotations.json`.
-- **Local file:** permanent events live in `annotations.json`; rebuild after editing it:
-  ```json
-  [{"date": "2026-09-10", "label": "New mattress"}]
-  ```
-  Events added under **Options → Events** in the local file are saved in your browser only.
+Events (e.g. a new mattress) appear as labelled lines on the charts. Tap one, or tap it under **Options → Events**, for a **Since <event>** card: each key number averaged over the nights since, with its % change vs the same number of days before (up to 90). Events are saved on the server (`data/events.json` in the bucket); the first time, they're seeded from `annotations.json`.
 
 ## How the numbers are calculated
 
@@ -135,24 +94,22 @@ Events (e.g. a new mattress) appear as labelled lines on the charts, a dot on th
 - Records more than 90 minutes apart are separate sessions. Bedtime, wake time and time in bed come from the night's longest session.
 - Nights with under an hour asleep (stray naps, watch-off fragments) are dropped.
 - **Total asleep** = Core + Deep + REM + Unspecified. **Efficiency** = asleep ÷ time in bed.
-- "% change" is relative to the earlier average (e.g. 39 → 47 min deep = +23%). Bedtime and wake time show minutes earlier/later instead.
-- **HRV** and **respiratory rate** are averaged over readings taken during the night's main sleep session.
-- Nightly moving averages cover the last N calendar days. Weekly and monthly ones cover the last N periods.
+- Overnight **HRV** (Sleep tab) is averaged over the night's main sleep session; daily **HRV** (Heart tab) over every reading that day.
+- "Your usual" is the average of the 4 weeks before the latest 7 days.
 
 ## Files
 
 | File | |
 |---|---|
 | `app.py` | Web app (Flask): login, upload, processing, dashboard |
-| `sleepdata.py` | Processing shared by the web app and the local build |
+| `sleepdata.py` | Turns `export.zip` into the dashboard data |
 | `passauth.py` | Passphrase login (the same file is used in accent_coach) |
-| `static/upload.js`, `templates/empty.html` | Upload sheet; page shown before the first upload |
+| `templates/` | `index.html` and its parts (`tabs/`, glance cards, sheets); `empty.html` before the first upload |
+| `static/js/` | `core.js` (data, formatting, chart basics), `habits.js`, `sleep.js`, `exercise.js`, `heart.js`, `app.js` (Alpine) |
+| `static/src/app.css`, `tailwind.config.js` | Tailwind input and config (built to `static/dist/`) |
+| `static/upload.js` | Upload sheet |
+| `dev.sh` | Local run with CSS rebuilds |
 | `Dockerfile`, `requirements.txt`, `.github/workflows/deploy.yml` | Container and deploy |
-| `build_dashboard.py` | Local build: extracts records from `export.zip` and writes `sleep_dashboard.html` |
-| `dashboard_template.html` | Page source (HTML/CSS/JS), used by both |
-| `sleep_dashboard.html` | Generated dashboard, with your data embedded |
-| `annotations.json` | Events shown on the charts |
-| `sleep_segments.parquet`, `health_records.parquet`, `workouts.parquet` | Caches of extracted records |
-| `sleep_analysis.ipynb` | The original notebook (no longer needed) |
+| `annotations.json` | Events used to seed the server's list |
 
-`export.zip`, the parquet caches, `sleep_dashboard.html` and the notebook contain your health data. They're gitignored and never leave this machine except through the app's upload.
+`export.zip` and any `*.parquet`, `sleep_dashboard.html` or notebook files contain your health data. They're gitignored and never leave this machine except through the app's upload.

@@ -1,0 +1,18 @@
+{# Heart: HRV (all day), resting and walking heart rate at a glance; trends below. #}
+<section x-show="tab === 'heart'" class="grid gap-4">
+  <h2 class="eyebrow">At a glance</h2>
+  {{ glance("heartGlance") }}
+
+  <h2 class="eyebrow mt-2">Explore</h2>
+  <div class="flex flex-wrap items-center gap-2">{% include "_range.html" %}</div>
+
+  <div class="card">
+    <h3 class="font-semibold">HRV</h3>
+    <p class="hint">Average of all readings each day. Higher usually means better recovery<span x-show="hrvRange">. Your normal range: <b class="text-slate-900 dark:text-white" x-text="hrvRange"></b></span></p>
+    <div id="hrvChart" class="mt-2 h-72"></div>
+  </div>
+  <div class="grid gap-4 lg:grid-cols-2">
+    <div class="card"><h3 class="font-semibold">Resting heart rate</h3><p class="hint">Lower is usually better.</p><div id="rhrChart" class="mt-2 h-64"></div></div>
+    <div class="card"><h3 class="font-semibold">Walking heart rate</h3><p class="hint">Average while walking. Drops as fitness improves.</p><div id="walkHrChart" class="mt-2 h-64"></div></div>
+  </div>
+</section>

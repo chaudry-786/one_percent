@@ -22,14 +22,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from flask import Flask, abort, request
+from flask import Flask, abort, render_template, request
 
 from passauth import init_auth
-from sleepdata import DEFAULT_SOURCE, build_payload, extract_all, render_html
+from sleepdata import DEFAULT_SOURCE, build_payload, extract_all
 
 HERE = Path(__file__).resolve().parent
-TEMPLATE = (HERE / "dashboard_template.html").read_text(encoding="utf-8")
-EMPTY_PAGE = (HERE / "templates" / "empty.html").read_text(encoding="utf-8")
 SOURCE = os.environ.get("HEALTH_SOURCE", DEFAULT_SOURCE)
 # Cloud Run runs in UTC; show times as you'd read them at home
 TZ = ZoneInfo(os.environ.get("APP_TIMEZONE", "Europe/London"))
@@ -166,14 +164,14 @@ def load_habits():
 def index():
     payload = read_json("data/latest.json")
     if not payload:
-        return EMPTY_PAGE
+        return render_template("empty.html")
     payload["events"] = []  # events come from data/events.json so edits don't need re-processing
     config = {
         "webapp": True, "events": load_events(), "meta": read_json("data/meta.json", {}),
         "habits": load_habits(), "accent": accent_minutes(), "accentUrl": ACCENT_URL,
         "today": datetime.now(TZ).date().isoformat(),
     }
-    return render_html(TEMPLATE, payload, config)
+    return render_template("index.html", data=payload, config=config)
 
 
 @app.post("/api/upload-url")

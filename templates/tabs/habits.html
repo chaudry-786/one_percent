@@ -1,0 +1,61 @@
+{# Habits: one card per habit. Streak (never miss twice), today, a 5-week chain, and "votes" for who you're becoming. #}
+<section x-show="tab === 'habits'" class="grid gap-4">
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <blockquote class="max-w-2xl text-lg leading-snug">
+      “<span x-text="quote"></span>”
+      <small class="mt-1 block text-xs text-slate-500">One missed day is fine. Never miss twice.</small>
+    </blockquote>
+    <button type="button" class="btn" x-show="webapp" @click="openTargets()">Targets</button>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-2">
+    <template x-for="h in habitCards" :key="h.id">
+      <article class="card grid gap-3 border-t-4" :class="h.style.top">
+        <div class="flex items-center gap-3">
+          <div class="grid h-10 w-10 place-items-center rounded-xl text-xl" :class="h.style.icon" x-text="h.icon"></div>
+          <div>
+            <h3 class="font-semibold" x-text="h.name"></h3>
+            <p class="text-xs text-slate-500" x-text="h.target"></p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <template x-if="h.st.streak">
+              <p><span class="text-4xl font-extrabold tracking-tight" x-text="h.st.streak"></span>
+                <span class="ml-1 text-sm text-slate-600 dark:text-slate-300" x-text="h.st.unit + (h.st.streak === 1 ? '' : 's') + ' in a row'"></span></p>
+            </template>
+            <template x-if="!h.st.streak">
+              <p class="text-xl font-semibold" x-text="'Start a new streak ' + (h.weekly ? 'this week' : 'today')"></p>
+            </template>
+            <p class="text-xs text-slate-500" x-show="h.st.best > h.st.streak" x-text="'Best: ' + h.st.best + ' ' + h.st.unit + 's'"></p>
+          </div>
+          <div class="max-w-[60%] text-right text-sm text-slate-600 dark:text-slate-300">
+            <span x-text="h.now.text"></span>
+            <span x-show="h.now.done" class="font-bold" :class="h.style.text">✓</span>
+            <a x-show="h.now.link" :href="h.now.link" target="_blank" rel="noopener" class="mt-1 block font-semibold" :class="h.style.text">Practise now →</a>
+          </div>
+        </div>
+
+        <div class="grid max-w-sm grid-cols-[repeat(7,minmax(0,1fr))_2.5rem] items-center gap-1.5">
+          <template x-for="l in ['M','T','W','T','F','S','S']"><span class="text-center text-[10px] text-slate-400" x-text="l"></span></template>
+          <span></span>
+          <template x-for="row in h.rows">
+            <div class="contents">
+              <template x-for="c in row.cells" :key="c.d">
+                <div class="aspect-square max-h-8 rounded-md" :title="c.title"
+                     :class="[c.s === 'done' ? h.style.done : c.s === 'miss' ? 'bg-slate-200 dark:bg-slate-800' : c.s === 'unknown' ? 'border border-dashed border-slate-300 dark:border-slate-700' : c.s === 'pending' ? 'border-2 border-slate-300 dark:border-slate-600' : '',
+                              c.today ? 'ring-2 ring-slate-400 ring-offset-1 ring-offset-white dark:ring-offset-slate-900' : '']"></div>
+              </template>
+              <span class="text-right text-[11px]" :class="row.week?.hit ? 'font-bold ' + h.style.text : 'text-slate-400'" x-text="row.week ? row.week.text : ''"></span>
+            </div>
+          </template>
+        </div>
+
+        <p class="border-t border-slate-200 pt-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-300">
+          <span x-text="h.st.recent"></span> · <b x-text="h.st.votes"></b> votes for becoming <span x-text="h.who"></span>
+        </p>
+      </article>
+    </template>
+  </div>
+</section>

@@ -1,0 +1,19 @@
+{# Before & after an event; opens when you tap an event line or an event in Options. #}
+<section class="card" x-show="compare" x-transition>
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <h2 class="font-semibold" x-text="compare?.title"></h2>
+      <p class="hint" x-text="compare?.hint"></p>
+    </div>
+    <button type="button" class="btn" @click="cmpEvent = null">Close ✕</button>
+  </div>
+  <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+    <template x-for="t in compare?.tiles || []" :key="t.label">
+      <div>
+        <p class="text-xs text-slate-500" x-text="t.label"></p>
+        <p class="text-lg font-bold" x-text="t.value"></p>
+        <p class="text-xs"><span class="font-semibold" :class="t.good ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'" x-text="t.change"></span> <span class="text-slate-500" x-text="'from ' + t.from"></span></p>
+      </div>
+    </template>
+  </div>
+</section>

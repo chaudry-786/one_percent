@@ -1,0 +1,29 @@
+{# Exercise: training time, consistency and mornings at a glance; charts below. #}
+<section x-show="tab === 'exercise'" class="grid gap-4">
+  <h2 class="eyebrow">At a glance <span class="font-normal normal-case tracking-normal">· walks not counted</span></h2>
+  {{ glance("exGlance") }}
+
+  <h2 class="eyebrow mt-2">Explore</h2>
+  <div class="flex flex-wrap items-center gap-2">
+    {% include "_range.html" %}
+    <button type="button" class="chip" :aria-pressed="walks" @click="walks = !walks">Count walks</button>
+  </div>
+
+  <div class="card">
+    <h3 class="font-semibold">Workout days</h3>
+    <p class="hint">Each square is a day; the colour shows how long you trained. Tap for details.</p>
+    <div id="exCalChart" class="mt-2"></div>
+  </div>
+  <div class="grid gap-4 lg:grid-cols-5">
+    <div class="card lg:col-span-3">
+      <h3 class="font-semibold">Training per week</h3>
+      <p class="hint" x-text="exWeeklyHint"></p>
+      <div id="exWeeklyChart" class="mt-2 h-72"></div>
+    </div>
+    <div class="card lg:col-span-2">
+      <h3 class="font-semibold">What time you train</h3>
+      <p class="hint">Workouts by start hour · morning sessions in amber</p>
+      <div id="exTimeChart" class="mt-2 h-72"></div>
+    </div>
+  </div>
+</section>

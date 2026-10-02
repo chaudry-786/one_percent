@@ -3,6 +3,8 @@ export.zip
 *.zip
 *.parquet
 sleep_dashboard.html
+.tools/
+static/dist/
 .store/
 
 venv/

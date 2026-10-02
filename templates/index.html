@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#020617">
+  <title>One Percent</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/app.css') }}">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.6.0/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/plugin/isoWeek.js"></script>
+  <script id="op-data" type="application/json">{{ {"data": data, "config": config} | tojson }}</script>
+  <script src="{{ url_for('static', filename='js/core.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/habits.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/sleep.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/exercise.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/heart.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100" x-data="onePercent" x-cloak>
+{% from "_glance.html" import glance %}
+
+<header class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 pb-2 pt-5 sm:px-6">
+  <div class="flex w-full flex-wrap items-center gap-x-6 gap-y-3 sm:w-auto">
+    <div>
+      <h1 class="text-xl font-bold tracking-tight sm:text-2xl">One Percent</h1>
+      <p class="text-xs text-slate-500" x-text="subtitle"></p>
+    </div>
+    <nav class="seg w-full sm:w-auto" role="tablist">
+      <template x-for="[k, label] in [['habits','Habits'],['sleep','Sleep'],['exercise','Exercise'],['heart','Heart']]" :key="k">
+        <button type="button" role="tab" class="flex-1 font-semibold sm:flex-none" :aria-pressed="tab === k" :aria-selected="tab === k" @click="tab = k" x-text="label"></button>
+      </template>
+    </nav>
+  </div>
+  <div class="flex w-full gap-2 sm:w-auto">
+    <button type="button" class="btn flex-1 sm:flex-none" x-show="webapp" @click="upload()">⇪ Upload export</button>
+    <button type="button" class="btn flex-1 sm:flex-none" @click="toggleTheme()" x-text="dark ? '☀️ Light' : '🌙 Dark'"></button>
+  </div>
+</header>
+
+<main class="mx-auto grid max-w-6xl gap-4 px-4 pb-12 pt-3 sm:px-6">
+  {% include "_compare.html" %}
+  {% include "tabs/habits.html" %}
+  {% include "tabs/sleep.html" %}
+  {% include "tabs/exercise.html" %}
+  {% include "tabs/heart.html" %}
+</main>
+
+{% include "_sheets.html" %}
+<footer class="mx-auto max-w-6xl px-4 pb-8 text-xs text-slate-500 sm:px-6">
+  Nights are labelled by the evening they start on · upload a new Health export any time.
+</footer>
+</body>
+</html>

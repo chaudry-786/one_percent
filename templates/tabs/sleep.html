@@ -1,0 +1,63 @@
+{# Sleep: deep, total and wake-ups at a glance; everything else below. #}
+<section x-show="tab === 'sleep'" class="grid gap-4">
+  <h2 class="eyebrow">At a glance</h2>
+  {{ glance("sleepGlance") }}
+
+  <h2 class="eyebrow mt-2">Explore</h2>
+  <div class="flex flex-wrap items-center gap-2">
+    <select class="field" x-model="metric" aria-label="Metric">
+      <template x-for="k in OP.sleep.METRIC_OPTIONS" :key="k">
+        <option :value="k" x-text="k === 'hrv' ? 'Overnight HRV' : OP.METRICS[k].label" :selected="k === metric"></option>
+      </template>
+    </select>
+    {% include "_range.html" %}
+    <div class="seg">
+      <template x-for="[g, l] in [['night','Nightly'],['week','Weekly'],['month','Monthly']]" :key="g">
+        <button type="button" :aria-pressed="group === g" @click="group = g" x-text="l"></button>
+      </template>
+    </div>
+    <button type="button" class="btn" @click="optionsOpen = true">Options</button>
+    <template x-for="t in filterTags"><button type="button" class="chip" @click="t.clear()" x-text="t.text + ' ✕'"></button></template>
+  </div>
+
+  <div class="card" x-show="nightsInView.length">
+    <h3 class="font-semibold" x-text="(metric === 'hrv' ? 'Overnight HRV' : OP.METRICS[metric].label) + ' — ' + {night: 'nightly', week: 'weekly average', month: 'monthly average'}[group]"></h3>
+    <p class="hint" x-text="group === 'night' ? 'Tap a dot for that night.' : 'Tap a ' + group + ' to see how often you have had one like it.'"></p>
+    <div x-show="selection" class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-slate-100 px-3 py-2 text-sm dark:bg-slate-800">
+      <b x-text="selection?.title"></b>
+      <span class="text-slate-600 dark:text-slate-300"><span x-text="selection?.text"></span>, so it's <b x-text="selection?.rarity"></b>. <span x-text="selection?.last"></span>.</span>
+      <button type="button" class="ml-auto text-blue-600 dark:text-blue-400" @click="selPeriod = null">Clear ✕</button>
+    </div>
+    <div id="trendChart" class="mt-2 h-80 sm:h-96"></div>
+  </div>
+  <p class="card hint text-center" x-show="!nightsInView.length">No nights match these filters.</p>
+
+  <div class="card" id="nightCard">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h3 class="font-semibold" x-text="'Night of ' + OP.fmtDay(night) + (events.filter(e => e.date === night).map(e => ' · ' + e.label).join(''))"></h3>
+        <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-300">
+          <template x-for="[k, v] in OP.sleep.nightStats(night)"><span><span x-text="k"></span> <b class="text-slate-900 dark:text-white" x-text="v"></b></span></template>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" class="btn" @click="stepNight(-1)" aria-label="Previous night">‹</button>
+        <input type="date" class="field" :value="night" :min="OP.first" :max="OP.last" @change="$event.target.value && pickNight($event.target.value)" aria-label="Night">
+        <button type="button" class="btn" @click="stepNight(1)" aria-label="Next night">›</button>
+      </div>
+    </div>
+    <div id="hypChart" class="mt-2 h-60"></div>
+  </div>
+
+  <div class="card">
+    <h3 class="font-semibold">Stage mix</h3>
+    <p class="hint">Each stage as a share of time asleep, per month</p>
+    <div id="mixChart" class="mt-2 h-72"></div>
+  </div>
+
+  <button type="button" class="btn justify-self-start" @click="moreOpen = !moreOpen" x-text="(moreOpen ? '▾' : '▸') + ' More: calendar and by night of the week'"></button>
+  <div x-show="moreOpen" class="grid gap-4 lg:grid-cols-3">
+    <div class="card lg:col-span-2"><h3 class="font-semibold">Calendar</h3><p class="hint">Tap a night to see it above</p><div id="calChart" class="mt-2 h-60"></div></div>
+    <div class="card"><h3 class="font-semibold">By night of the week</h3><p class="hint">Average for each night</p><div id="dowChart" class="mt-2 h-60"></div></div>
+  </div>
+</section>

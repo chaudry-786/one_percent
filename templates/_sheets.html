@@ -1,0 +1,55 @@
+{# Pop-up sheets: Options (dates, which nights, events) and habit Targets. #}
+<div x-show="optionsOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="optionsOpen = false" @keydown.escape.window="optionsOpen = false">
+  <div class="card max-h-[90vh] w-full min-w-0 max-w-md space-y-5 overflow-y-auto">
+    <div class="flex items-center justify-between"><h2 class="text-lg font-semibold">Options</h2><button type="button" class="btn" @click="optionsOpen = false">Done</button></div>
+    <div>
+      <p class="eyebrow mb-2">Custom dates</p>
+      <div class="flex items-center gap-2">
+        <input type="date" class="field min-w-0 flex-1" x-model="from" @change="range = 'custom'" aria-label="From"> –
+        <input type="date" class="field min-w-0 flex-1" x-model="to" @change="range = 'custom'" aria-label="To">
+      </div>
+    </div>
+    <div>
+      <p class="eyebrow mb-2">Which nights</p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="chip" :aria-pressed="dow.length === 7" @click="dow = [0,1,2,3,4,5,6]">Every night</button>
+        <button type="button" class="chip" :aria-pressed="dow.join() === '0,1,2,3,6'" @click="dow = [0,1,2,3,6]">Weeknights</button>
+        <button type="button" class="chip" :aria-pressed="dow.join() === '4,5'" @click="dow = [4,5]">Weekends</button>
+      </div>
+      <div class="mt-2 flex flex-wrap gap-1.5">
+        <template x-for="(d, i) in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']" :key="i">
+          <button type="button" class="chip px-2.5" :aria-pressed="dow.includes(i)" @click="toggleDow(i)" x-text="d"></button>
+        </template>
+      </div>
+    </div>
+    <div>
+      <p class="eyebrow mb-2">Events <span class="font-normal normal-case tracking-normal">· tap one to compare before &amp; after</span></p>
+      <div class="flex flex-wrap gap-2">
+        <template x-for="e in events" :key="e.date + e.label">
+          <span class="chip inline-flex items-center gap-2">
+            <button type="button" @click="cmpEvent = e.date; optionsOpen = false" x-text="OP.fmtDay(e.date) + ' · ' + e.label"></button>
+            <button type="button" class="text-slate-400 hover:text-slate-700 dark:hover:text-white" @click="removeEvent(e)" aria-label="Remove event">✕</button>
+          </span>
+        </template>
+      </div>
+      <form class="mt-2 flex flex-wrap gap-2" @submit.prevent="addEvent()">
+        <input type="date" class="field w-full sm:w-auto" x-model="newEvent.date" required aria-label="Event date">
+        <input class="field min-w-0 flex-1" x-model="newEvent.label" placeholder="e.g. New pillow" maxlength="60" required aria-label="Event name">
+        <button type="submit" class="btn">Add</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div x-show="targetsOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="targetsOpen = false" @keydown.escape.window="targetsOpen = false">
+  <form class="card w-full min-w-0 max-w-sm space-y-3" @submit.prevent="saveTargets()">
+    <h2 class="text-lg font-semibold">Targets</h2>
+    <p class="hint">Raise them a little when they start to feel easy.</p>
+    <label class="flex items-center justify-between gap-3">Wake up by <input type="time" class="field w-32" x-model="draft.wakeBy" required></label>
+    <label class="flex items-center justify-between gap-3">Deep sleep (min) <input type="number" min="0" max="300" class="field w-32" x-model="draft.deepMin"></label>
+    <label class="flex items-center justify-between gap-3">Time asleep (hours) <input type="number" min="0" max="15" step="0.25" class="field w-32" x-model="draft.asleepH"></label>
+    <label class="flex items-center justify-between gap-3">Workout days a week <input type="number" min="1" max="7" class="field w-32" x-model="draft.gymDays"></label>
+    <label class="flex items-center justify-between gap-3">Accent practice (min) <input type="number" min="1" max="240" class="field w-32" x-model="draft.accentMin"></label>
+    <div class="flex justify-end gap-2 pt-2"><button type="button" class="btn" @click="targetsOpen = false">Cancel</button><button type="submit" class="btn-primary">Save</button></div>
+  </form>
+</div>

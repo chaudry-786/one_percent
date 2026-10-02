@@ -1,9 +1,8 @@
 """Turn an Apple Health export into the dashboard's data payload.
 
-Shared by the local CLI (build_dashboard.py) and the web app (app.py).
+Used by the web app (app.py) when an export is uploaded.
 """
 
-import json
 import zipfile
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
@@ -22,6 +21,7 @@ HEALTH_TYPES = {
     "HKQuantityTypeIdentifierRespiratoryRate": "resp",
     "HKQuantityTypeIdentifierAppleSleepingWristTemperature": "temp",
     "HKQuantityTypeIdentifierAppleExerciseTime": "exercise",
+    "HKQuantityTypeIdentifierWalkingHeartRateAverage": "walkhr",
 }
 # Workout types grouped for display; anything else counts as "cardio".
 WORKOUT_GROUPS = {
@@ -195,6 +195,20 @@ def add_health(nights, windows, health: pd.DataFrame):
         n["exMin"] = round(float(exercise.get(d, 0.0)), 1)
 
 
+def daily_health(health: pd.DataFrame):
+    """Per calendar day: HRV averaged over every reading that day (not just overnight), resting HR, walking HR."""
+    if health.empty:
+        return []
+    h = health.assign(day=health["start"].dt.date)
+    pick = lambda kind, how: h[h["type"] == kind].groupby("day")["value"].agg(how)
+    df = pd.DataFrame({"hrv": pick("hrv", "mean"), "rhr": pick("rhr", "last"), "walkHr": pick("walkhr", "mean")})
+    df = df.dropna(how="all").sort_index()
+    return [
+        {"d": d.isoformat(), **{k: (round(float(v), 1) if pd.notna(v) else None) for k, v in row.items()}}
+        for d, row in df.iterrows()
+    ]
+
+
 def workout_rows(workouts: pd.DataFrame):
     """[date, start minute of day, duration min, type, group, kcal, avg HR] per workout."""
     out = []
@@ -221,11 +235,6 @@ def build_payload(tables, source=DEFAULT_SOURCE, events=None):
         "nights": nights,
         "segments": segments,
         "workouts": workout_rows(workouts),
+        "daily": daily_health(health),
         "events": events or [],
     }
-
-
-def render_html(template: str, payload, config=None) -> str:
-    """Fill the dashboard template with the data payload and page config (e.g. {"webapp": true})."""
-    dump = lambda o: json.dumps(o, separators=(",", ":")).replace("</", "<\\/")
-    return template.replace("__SLEEP_DATA__", dump(payload)).replace("__APP_CONFIG__", dump(config or {}))

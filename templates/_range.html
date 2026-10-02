@@ -1,0 +1,5 @@
+<div class="seg">
+  <template x-for="r in ['30d','90d','6m','1y','all']" :key="r">
+    <button type="button" :aria-pressed="range === r" @click="range = r" x-text="r === 'all' ? 'All' : r"></button>
+  </template>
+</div>
