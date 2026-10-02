@@ -1,10 +1,4 @@
 // Alpine component for the whole page. Markup lives in templates/; logic in core/habits/sleep/exercise/heart.js.
-OP.spark = (g) => // mini bar chart for glance cards (SVG built here: Alpine can't loop inside <svg>)
-  `<svg viewBox="0 0 300 46" preserveAspectRatio="none" class="my-2 h-12 w-full overflow-visible">` +
-  g.bars.map(b => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="1.5" class="${g.bar}" opacity="${b.last ? 1 : 0.4}"/>`).join("") +
-  (g.usualY == null ? "" : `<line x1="0" x2="300" y1="${g.usualY}" y2="${g.usualY}" class="stroke-slate-400" stroke-dasharray="4 3" stroke-width="1" vector-effect="non-scaling-stroke"/>`) +
-  `</svg>`;
-
 document.addEventListener("alpine:init", () => {
   Alpine.data("onePercent", () => ({
     tab: "habits",
@@ -13,7 +7,7 @@ document.addEventListener("alpine:init", () => {
     metric: "deep", range: "1y", from: "", to: "", group: "week", dow: [0, 1, 2, 3, 4, 5, 6],
     selPeriod: null, selection: null, skipTap: false, night: OP.last, moreOpen: false,
     // exercise / heart
-    walks: false, exWeeklyHint: "", hrvRange: "",
+    walks: false, exWeeklyHint: "", hrvRange: "", bucketHint: "", bucketInfo: null,
     // sheets
     optionsOpen: false, targetsOpen: false,
     targets: { ...OP.habits.DEFAULTS, ...(OP.APP.habits || {}) }, draft: {},
@@ -48,6 +42,11 @@ document.addEventListener("alpine:init", () => {
       try { saved = localStorage.getItem("op-theme"); } catch { /* storage blocked */ }
       this.dark = saved ? saved === "dark" : !matchMedia("(prefers-color-scheme: light)").matches;
       this.applyTheme();
+      // the open tab lives in the URL (#sleep, #exercise, #heart) so a refresh stays on it; Habits is the plain URL
+      const TABS = ["habits", "sleep", "exercise", "heart"], fromHash = () => (TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "habits");
+      this.tab = fromHash();
+      this.$watch("tab", t => history.replaceState(null, "", t === "habits" ? location.pathname : `#${t}`));
+      addEventListener("hashchange", () => { this.tab = fromHash(); });
       for (const k of ["metric", "group", "range", "from", "to"]) this.$watch(k, () => { this.selPeriod = null; });
       for (const k of ["tab", "metric", "range", "from", "to", "group", "dow", "selPeriod", "night", "moreOpen", "walks", "events"]) this.$watch(k, () => this.render());
       this.render();
@@ -67,6 +66,7 @@ document.addEventListener("alpine:init", () => {
           const list = this.nightsInView;
           if (!list.length) return;
           OP.sleep.trend(this, list, b);
+          OP.sleep.buckets(this, list, b);
           OP.sleep.mix(list);
           OP.sleep.hypnogram(this.night);
           if (this.moreOpen) OP.sleep.calendar(this, list, b);

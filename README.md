@@ -30,11 +30,11 @@ python3 -m venv venv && venv/bin/pip install -r requirements.txt
 - **Tailwind CSS** for styling (utility classes in the templates; a few shared components such as `.card` and `.btn` in `static/src/app.css`).
 - **Alpine.js** for state and interactivity (`static/js/app.js`): tabs, controls, sheets.
 - **ECharts** for charts and **Day.js** for dates, both from a CDN.
-- The server embeds the data as JSON in the page; there's nothing to fetch after load. Refreshing resets the view, and the light/dark choice is remembered.
+- The server embeds the data as JSON in the page; there's nothing to fetch after load. The open tab is in the URL (`#sleep`, `#exercise`, `#heart`), so refreshing stays on it; everything else resets on refresh, and the light/dark choice is remembered.
 
 ## What's on the page
 
-Every tab starts with **At a glance** cards: a big number, a mini chart of the last weeks with a dashed line for your usual, and a plain-language "how it's going". A gold badge marks your best week of the year. Charts to explore come below.
+Every tab starts with **At a glance** cards: a big number, a plain-language "how it's going", and a small chart with its scale, dates and a labelled dashed line for your usual (or target). Sleep and Heart use a line (a dot per night or day; Heart adds the 7-day average line the big number shows); Exercise uses bars, one per week, with the current week marked "so far". Tap the chart to see any night, day or week; tap again to go back. A gold badge marks your best week of the year.
 
 ### Habits
 
@@ -62,6 +62,21 @@ Accent minutes use the same estimate as Accent Coach's Analytics page, based on 
 - **At a glance:** deep sleep, wake-up time (with how many of the last 7 mornings hit your target) and wake-ups, each vs your usual (the 4 weeks before). Earlier wake-ups count as better.
 - **Explore:** pick a metric, date range and Nightly / Weekly / Monthly. **Options** has custom dates, which nights (weeknights, weekends, specific days) and events.
   - **Trend:** a gold marker shows each year's best week/month (from all your data); a subtle hollow ring marks the high and low in view. **Tap a week or month** to see how common a value like it is in the range and when it last happened.
+  - **Nights by range:** the share of nights in each range for the picked metric, per month (per week for ranges of 90 days or less). Grey is the worse end and full colour the better end. Tapping a week on the trend chart uses the same ranges. The ranges are fixed:
+
+    | Metric | Ranges |
+    |---|---|
+    | Deep sleep | under 30 · 30–45 · 45–60 · 60–75 · 75m+ |
+    | Total sleep | under 5h · 5–6h · 6–7h · 7–8h · 8h+ |
+    | REM | under 60 · 60–90 · 90–120 · 120m+ |
+    | Core | under 3h · 3–4h · 4–5h · 5h+ |
+    | Wake-ups | 0–4 · 5–9 · 10–14 · 15+ |
+    | Time awake | under 10 · 10–20 · 20–40 · 40m+ |
+    | Efficiency | under 85 · 85–90 · 90–95 · 95%+ |
+    | Bedtime | before 23:00 · 23–00 · 00–01 · 01–02 · after 02:00 |
+    | Wake time | before 07:15 · 07:15–08:00 · 08–09 · after 09:00 |
+
+    To change them, edit `RANGES` in `static/js/sleep.js`.
   - **Night detail:** stage timeline for one night. Tap a dot or a calendar cell, or step with ‹ ›.
   - **Stage mix:** each stage's share of sleep, per month.
   - **More:** calendar heatmap and averages by night of the week.
@@ -94,7 +109,7 @@ Events (e.g. a new mattress) appear as labelled lines on the charts. Tap one, or
 - Records more than 90 minutes apart are separate sessions. Bedtime, wake time and time in bed come from the night's longest session.
 - Nights with under an hour asleep (stray naps, watch-off fragments) are dropped.
 - **Total asleep** = Core + Deep + REM + Unspecified. **Efficiency** = asleep ÷ time in bed.
-- Overnight **HRV** (Sleep tab) is averaged over the night's main sleep session; daily **HRV** (Heart tab) over every reading that day.
+- **HRV** (Heart tab) is averaged over every reading that day; the before/after event card uses the overnight average.
 - "Your usual" is the average of the 4 weeks before the latest 7 days.
 
 ## Files

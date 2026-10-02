@@ -1,8 +1,8 @@
-{# "At a glance" cards: icon + title, a big number, a 30-day mini chart against your usual, and how it's going. #}
+{# "At a glance" cards: icon + title, a big number, a mini chart (tap a point to see it) against your usual, and how it's going. #}
 {% macro glance(items) %}
 <section class="grid gap-3 md:grid-cols-3">
   <template x-for="g in {{ items }}" :key="g.key">
-    <article class="card border-t-4" :class="g.top">
+    <article class="card border-t-4" :class="g.top" x-data="{ pick: null }">
       <div class="flex items-center justify-between gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
         <span x-text="g.icon + '  ' + g.title"></span>
         <span x-show="g.badge" class="whitespace-nowrap rounded-full border border-amber-400/70 bg-amber-400/15 px-2 py-0.5 text-xs font-bold text-slate-900 dark:text-white" x-text="'★ ' + g.badge"></span>
@@ -10,8 +10,8 @@
       <div class="mt-2 text-4xl font-extrabold tracking-tight">
         <span x-text="g.num"></span><span class="ml-1 text-base font-semibold text-slate-500" x-text="g.unit"></span>
       </div>
-      <p class="text-xs text-slate-500" x-text="g.label"></p>
-      <div x-html="OP.spark(g)"></div>
+      <p class="text-xs" :class="pick != null ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-500'" x-text="pick != null ? g.chart.points[pick].text : g.label"></p>
+      <div class="cursor-pointer" :class="g.color" x-html="OP.mini(g.chart, pick)" @click="pick = OP.pickAt($event, g.chart, pick)"></div>
       <p class="text-sm font-semibold" :class="g.trend.good ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'" x-text="g.trend.text"></p>
       <p class="mt-0.5 text-xs text-slate-500" x-text="g.sub"></p>
     </article>

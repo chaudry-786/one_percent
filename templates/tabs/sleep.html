@@ -7,7 +7,7 @@
   <div class="flex flex-wrap items-center gap-2">
     <select class="field" x-model="metric" aria-label="Metric">
       <template x-for="k in OP.sleep.METRIC_OPTIONS" :key="k">
-        <option :value="k" x-text="k === 'hrv' ? 'Overnight HRV' : OP.METRICS[k].label" :selected="k === metric"></option>
+        <option :value="k" x-text="OP.METRICS[k].label" :selected="k === metric"></option>
       </template>
     </select>
     {% include "_range.html" %}
@@ -21,7 +21,7 @@
   </div>
 
   <div class="card" x-show="nightsInView.length">
-    <h3 class="font-semibold" x-text="(metric === 'hrv' ? 'Overnight HRV' : OP.METRICS[metric].label) + ' — ' + {night: 'nightly', week: 'weekly average', month: 'monthly average'}[group]"></h3>
+    <h3 class="font-semibold" x-text="OP.METRICS[metric].label + ' — ' + {night: 'nightly', week: 'weekly average', month: 'monthly average'}[group]"></h3>
     <p class="hint" x-text="group === 'night' ? 'Tap a dot for that night.' : 'Tap a ' + group + ' to see how often you have had one like it.'"></p>
     <div x-show="selection" class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-slate-100 px-3 py-2 text-sm dark:bg-slate-800">
       <b x-text="selection?.title"></b>
@@ -29,6 +29,24 @@
       <button type="button" class="ml-auto text-blue-600 dark:text-blue-400" @click="selPeriod = null">Clear ✕</button>
     </div>
     <div id="trendChart" class="mt-2 h-80 sm:h-96"></div>
+  </div>
+  <div class="card" x-show="nightsInView.length">
+    <h3 class="font-semibold" x-text="OP.METRICS[metric].label + ' — nights by range'"></h3>
+    <p class="hint" x-text="bucketHint"></p>
+    <div class="mt-2 min-h-[2.75rem] rounded-xl bg-slate-100 px-3 py-1.5 text-xs dark:bg-slate-800">
+      <template x-if="bucketInfo">
+        <div>
+          <b x-text="bucketInfo.title"></b>
+          <div class="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+            <template x-for="r in bucketInfo.rows" :key="r.label">
+              <span class="whitespace-nowrap"><i class="mr-1 inline-block h-2 w-2 rounded-sm" :style="'background:' + r.color"></i><span x-text="r.label"></span> <b x-text="r.text"></b></span>
+            </template>
+          </div>
+        </div>
+      </template>
+      <p x-show="!bucketInfo" class="pt-2 text-slate-500">Hover or tap a column to see its numbers.</p>
+    </div>
+    <div id="bucketChart" class="mt-1 h-72"></div>
   </div>
   <p class="card hint text-center" x-show="!nightsInView.length">No nights match these filters.</p>
 

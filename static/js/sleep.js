@@ -6,20 +6,22 @@ OP.sleep = (() => {
 
   // ---------- at a glance ----------
   const GLANCE = [
-    { key: "deep", icon: "🌊", top: "border-t-blue-500", bar: "fill-blue-500" },
-    { key: "wake", icon: "☀️", top: "border-t-amber-500", bar: "fill-amber-500", better: -1 }, // earlier is better here
-    { key: "awakeN", icon: "👁️", top: "border-t-orange-500", bar: "fill-orange-500" },
+    { key: "deep", icon: "🌊", top: "border-t-blue-500", color: "text-blue-500" },
+    { key: "wake", icon: "☀️", top: "border-t-amber-500", color: "text-amber-500", better: -1 }, // earlier is better here
+    { key: "awakeN", icon: "👁️", top: "border-t-orange-500", color: "text-orange-500" },
   ];
   function glanceCards(targets) {
     return GLANCE.map(g => {
-      const M = METRICS[g.key], st = glance(nights.map(n => ({ d: n.d, v: n[g.key] })), { ...M, better: g.better ?? M.better });
+      const M = METRICS[g.key], st = glance(nights.map(n => ({ d: n.d, v: n[g.key] })), { ...M, better: g.better ?? M.better,
+        dayText: g.key === "wake" ? d => `Woke ${fmtDay(addDays(d, 1))}` : d => `Night of ${fmtDay(d)}` });
       if (!st) return null;
       const [num, unit] = bigVal(st.last.v, M.unit);
-      let label = `Last night · ${fmtDay(st.last.d)}`, sub = `7-night average ${fmtVal(st.avg7, M.unit)}${st.usual != null ? ` · usual ${fmtVal(st.usual, M.unit)}` : ""}`;
+      if (g.key === "wake") Object.assign(st.chart, { from: dayjs(addDays(st.last.d, -28)).format("D MMM"), to: dayjs(addDays(st.last.d, 1)).format("D MMM") });
+      let label = `Last night · ${fmtDay(st.last.d)}`, sub = `Each dot is a night · 7-night average ${fmtVal(st.avg7, M.unit)}`;
       if (g.key === "wake") { // nights are labelled by the evening, so the wake-up is the next morning
         const [h, m] = targets.wakeBy.split(":").map(Number), last7 = nights.slice(-7);
         label = `Woke up · ${fmtDay(addDays(st.last.d, 1))}`;
-        sub = `${last7.filter(n => n.wake - 720 <= h * 60 + m).length} of the last 7 mornings by ${targets.wakeBy} · usual ${fmtVal(st.usual, M.unit)}`;
+        sub = `Each dot is a morning · ${last7.filter(n => n.wake - 720 <= h * 60 + m).length} of the last 7 by ${targets.wakeBy}`;
       }
       return { ...g, title: g.key === "wake" ? "Wake-up time" : M.label, num, unit, ...st, label, sub };
     }).filter(Boolean);
@@ -77,20 +79,79 @@ OP.sleep = (() => {
   }
 
   // a selected week/month: which other periods fell in the same value bucket
+  // ---------- fixed ranges per metric (base units; bed/wake are minutes after noon) ----------
+  const RANGES = { deep: [30, 45, 60, 75], total: [300, 360, 420, 480], rem: [60, 90, 120], core: [180, 240, 300], awakeN: [5, 10, 15],
+    awake: [10, 20, 40], eff: [85, 90, 95], bed: [660, 720, 780, 840], wake: [1155, 1200, 1260] };
+  const rangeOf = (v, edges) => { let i = 0; while (i < edges.length && v >= edges[i]) i++; return i; };
+  function rangeLabels(key) {
+    const u = METRICS[key].unit, e = RANGES[key];
+    const f = v => ({ dur: `${v / 60}h`, min: `${v}m`, pct: `${v}%`, clock: clock(v), ms: `${v} ms`, bpm: `${v} bpm` })[u] ?? `${v}`;
+    const bare = v => (u === "clock" ? clock(v) : u === "dur" ? `${v / 60}` : `${v}`);
+    return e.map((x, i) => {
+      if (i === 0) return u === "clock" ? `before ${f(x)}` : u === "count" ? `0–${x - 1}` : `under ${f(x)}`;
+      return u === "count" ? `${e[i - 1]}–${x - 1}` : `${bare(e[i - 1])}–${f(x)}`;
+    }).concat(u === "clock" ? `after ${f(e.at(-1))}` : `${f(e.at(-1))}+`);
+  }
+
+  // a selected week/month: which other periods fell in the same range
   function selection(key, p, pts, k) {
     const M = METRICS[key], use = pts.filter(x => x.n >= MIN_N[p] || x.k === k), sel = use.find(x => x.k === k);
     if (!sel) return null;
-    const s = use.map(x => x.v).sort((a, b) => a - b), raw = Math.max((quantile(s, 0.95) - quantile(s, 0.05)) / 4, 1e-6);
-    const step = ["min", "dur"].includes(M.unit) ? [1, 2, 5, 10, 15, 20, 30, 45, 60, 90, 120].find(x => x >= raw) || 120
-      : [1, 2, 5, 10].map(m => m * 10 ** Math.floor(Math.log10(raw))).find(x => x >= raw);
-    const lo = Math.floor(sel.v / step) * step, hi = lo + step;
-    const members = use.filter(x => x.v >= lo && x.v < hi), earlier = members.filter(x => x.k < k);
+    const edges = RANGES[key], i = rangeOf(sel.v, edges), vs = use.map(x => x.v);
+    const lo = edges[i - 1] ?? Math.min(...vs), hi = edges[i] ?? Math.max(...vs); // open-ended ranges shade to the data's edge
+    const members = use.filter(x => rangeOf(x.v, edges) === i), earlier = members.filter(x => x.k < k);
     const share = members.length / use.length;
     return { k, lo, hi, members: new Set(members.map(x => x.k)),
       title: `${labelOf(k, p)}: ${fmtVal(sel.v, M.unit)}`,
-      text: `${M.unit === "dur" ? `${hm(lo)}–${hm(hi)}` : `${fmtVal(lo, M.unit)} – ${fmtVal(hi, M.unit)}`} happened in ${members.length} of ${use.length} ${p}s in this range`,
+      text: `${rangeLabels(key)[i]} happened in ${members.length} of ${use.length} ${p}s in this range`,
       rarity: share < 0.1 ? "rare" : share < 0.25 ? "uncommon" : share < 0.5 ? "common" : "very common",
       last: earlier.length ? `Last time: ${labelOf(earlier.at(-1).k, p)}` : "First time in this range" };
+  }
+
+  // ---------- nights by range: share of nights in each range, per month (per week for short ranges) ----------
+  function buckets(app, list, range) {
+    const key = app.metric, M = METRICS[key], edges = RANGES[key], labels = rangeLabels(key), b = base();
+    const p = dayjs(range[1]).diff(range[0], "day") <= 92 ? "week" : "month";
+    const groups = new Map();
+    for (const n of list) if (n[key] != null) {
+      const k = keyOf(n.d, p), c = groups.get(k) || groups.set(k, new Array(labels.length).fill(0)).get(k);
+      c[rangeOf(n[key], edges)]++;
+    }
+    const keys = [...groups.keys()].sort(), counts = keys.map(k => groups.get(k)), totals = counts.map(c => c.reduce((a, x) => a + x, 0));
+    // strongest colour at the better end (earlier is better for bed and wake times)
+    // grey at the worse end → the metric's colour at the better end (earlier is better for bed and wake times)
+    const mix = (a, z, f) => "#" + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - f) + parseInt(z.slice(i, i + 2), 16) * f).toString(16).padStart(2, "0")).join("");
+    const grey = OP.isDark() ? "#475569" : "#cbd5e1", better = M.better || -1;
+    const colors = labels.map((_, i) => mix(grey, hex(key), i / (labels.length - 1)));
+    if (better < 0) colors.reverse();
+    const el = document.getElementById("bucketChart"), perRow = Math.max(1, Math.floor((el.clientWidth - 10) / 110));
+    const legendRows = Math.ceil(labels.length / perRow);
+    if (keys.length) {
+      const c = counts.at(-1), top = c.indexOf(Math.max(...c)), k = keys.at(-1);
+      const when = k === keyOf(dataEnd, p) || k === keyOf(OP.addDays(dataEnd, -1), p) ? `This ${p}` : p === "month" ? dayjs(`${k}-01`).format("MMM YYYY") : `Week of ${dayjs(k).format("D MMM")}`;
+      app.bucketHint = `${when}: mostly ${labels[top]} (${c[top]} of ${totals.at(-1)} nights). Each column is a ${p}.`;
+    } else app.bucketHint = "";
+    const c1 = chart("bucketChart");
+    c1.setOption({
+      ...b, legend: { ...b.legend, type: "plain", data: labels }, grid: { ...b.grid, top: 30 + (legendRows - 1) * 22 },
+      // no floating tooltip (it covered neighbouring columns): the hovered column's numbers show in a row above the chart
+      tooltip: { ...b.tooltip, trigger: "axis", showContent: false, axisPointer: { type: "shadow" } },
+      xAxis: axis({ type: "category", data: keys.map(k => (p === "month" ? dayjs(`${k}-01`).format("MMM YY") : dayjs(k).format("D MMM"))), splitLine: { show: false } }),
+      yAxis: axis({ type: "value", max: 100, axisLabel: { color: hex("muted"), fontSize: 11, formatter: "{value}%" } }),
+      series: labels.map((l, i) => ({ name: l, type: "bar", stack: "r", barMaxWidth: 36, emphasis: { focus: "series" },
+        data: counts.map((c, j) => (totals[j] ? (c[i] / totals[j]) * 100 : 0)),
+        itemStyle: { color: colors[i], borderColor: hex("surface"), borderWidth: 1 } })),
+    }, true);
+    const periodName = k => (p === "month" ? dayjs(`${k}-01`).format("MMM YYYY") : `Week of ${dayjs(k).format("D MMM")}`);
+    app.bucketInfo = null;
+    c1.off("updateAxisPointer"); c1.off("globalout");
+    c1.on("updateAxisPointer", e => {
+      const i = e.axesInfo?.[0]?.value;
+      if (i == null || !keys[i]) return;
+      app.bucketInfo = { title: `${periodName(keys[i])} · ${totals[i]} nights`,
+        rows: labels.map((l, j) => ({ label: l, color: colors[j], text: `${totals[i] ? Math.round((counts[i][j] / totals[i]) * 100) : 0}% (${counts[i][j]})` })) };
+    });
+    c1.on("globalout", () => { app.bucketInfo = null; });
   }
 
   // ---------- trend ----------
@@ -260,6 +321,6 @@ OP.sleep = (() => {
       }) };
   }
 
-  const METRIC_OPTIONS = ["deep", "total", "rem", "core", "awakeN", "awake", "eff", "bed", "wake", "hrv", "rhr"];
-  return { glanceCards, trend, mix, nightStats, hypnogram, calendar, compare, METRIC_OPTIONS, labelOf };
+  const METRIC_OPTIONS = ["deep", "total", "rem", "core", "awakeN", "awake", "eff", "bed", "wake"];
+  return { glanceCards, trend, buckets, mix, nightStats, hypnogram, calendar, compare, METRIC_OPTIONS, labelOf };
 })();

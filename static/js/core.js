@@ -129,7 +129,7 @@ window.OP = (() => {
 
   // ---------- "at a glance" statistics for a dated series ----------
   // points: [{d, v}] sorted by date. Latest 7 values vs the 28 before ("your usual"); 30-day mini bars; record badge.
-  function glance(points, { unit, better, spanDays = 30 }) {
+  function glance(points, { unit, better, spanDays = 30, dayText, avgLine = false }) {
     const vals = points.filter(p => p.v != null);
     if (!vals.length) return null;
     const lastP = vals.at(-1);
@@ -155,20 +155,91 @@ window.OP = (() => {
       for (let i = 6; i < yearVals.length - 1; i++) best = Math.max(best, better * mean(yearVals.slice(i - 6, i + 1).map(p => p.v)));
       if (better * avg7 > best) badge = `Best week of ${year}`;
     }
-    // mini bars: last spanDays calendar days ending at the latest point
+    // mini line chart: the last spanDays calendar days ending at the latest point (gaps kept)
     const byDay = new Map(points.map(p => [p.d, p.v]));
     const days = Array.from({ length: spanDays }, (_, i) => addDays(lastP.d, i - spanDays + 1));
-    const series = days.map(d => byDay.get(d) ?? null), present = series.filter(v => v != null);
-    const lo = Math.min(...present, usual ?? Infinity), hi = Math.max(...present, usual ?? -Infinity);
-    const floor = lo - (hi - lo) * 0.35 || 0, scale = v => (hi - floor ? ((v - floor) / (hi - floor)) * 42 : 21);
-    const w = 300 / spanDays;
-    const bars = series.map((v, i) => (v == null ? null : { x: i * w + 1, w: w - 2, h: Math.max(2, scale(v)), y: 46 - Math.max(2, scale(v)), last: i === spanDays - 1 })).filter(Boolean);
-    return { last: lastP, avg7, usual, trend, badge, bars, usualY: usual == null ? null : 46 - scale(usual) };
+    const roll = d => mean(Array.from({ length: 7 }, (_, i) => byDay.get(addDays(d, -i))).filter(v => v != null));
+    const chart = { kind: "line", unit, ref: usual, refText: usual == null ? "" : `usual ${short(usual, unit)}`,
+      from: dayjs(days[0]).format("D MMM"), to: dayjs(days.at(-1)).format("D MMM"),
+      points: days.map(d => {
+        const v = byDay.get(d) ?? null, a = avgLine ? roll(d) : null;
+        return { v, avg: a, text: v == null ? `${(dayText || fmtDay)(d)} · no data` : `${(dayText || fmtDay)(d)} · ${fmtVal(v, unit)}${avgLine ? ` · 7-day average ${fmtVal(a, unit)}` : ""}` };
+      }) };
+    if (avgLine) chart.avgLine = true;
+    return { last: lastP, avg7, usual, trend, badge, chart };
+  }
+
+  // short labels for mini-chart scales
+  function short(v, unit) {
+    if (v == null) return "";
+    return { clock: clock(v), dur: hm(v), min: `${Math.round(v)}m`, count: `${+v.toFixed(1)}` }[unit] ?? `${Math.round(v)}`;
+  }
+
+  // Mini chart for glance cards, as HTML + SVG (Alpine can't loop inside <svg>).
+  // c: {kind: "line"|"bars", unit, points: [{v, avg?, text, current?}], ref, refText, from, to, avgLine?}; pick: highlighted index or null (= latest)
+  function mini(c, pick) {
+    const n = c.points.length, W = 300, H = 60, bars = c.kind === "bars";
+    const lastI = c.points.findLastIndex(p => p.v != null), sel = pick ?? lastI;
+    const vals = c.points.flatMap(p => [p.v, c.avgLine ? p.avg : null]).filter(v => v != null);
+    if (!vals.length) return "";
+    let lo = bars ? 0 : Math.min(...vals), hi = Math.max(...vals, ...(c.ref != null ? [c.ref] : []));
+    if (!bars && c.ref != null) lo = Math.min(lo, c.ref);
+    if (hi === lo) hi = lo + 1;
+    const pad = bars ? 0 : (hi - lo) * 0.1, y0 = lo - pad, y1 = hi + pad;
+    const X = i => (bars ? ((i + 0.5) * W) / n : n === 1 ? W / 2 : (i * W) / (n - 1)), Y = v => H - ((v - y0) / (y1 - y0)) * H;
+    const pct = v => `${((Y(v) / H) * 100).toFixed(1)}%`;
+    const dot = (x, y, w, extra = "") => `<path d="M${x} ${y}h0" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" vector-effect="non-scaling-stroke" ${extra}/>`;
+    const path = key => { let d = "", on = false; c.points.forEach((p, i) => { if (p[key] == null) { on = false; return; } d += `${on ? "L" : "M"}${X(i).toFixed(1)} ${Y(p[key]).toFixed(1)}`; on = true; }); return d; };
+    let svg = "";
+    if (c.ref != null) svg += `<line x1="0" x2="${W}" y1="${Y(c.ref)}" y2="${Y(c.ref)}" class="stroke-slate-400" stroke-dasharray="4 3" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+    if (bars) {
+      const bw = (W / n) * 0.7;
+      c.points.forEach((p, i) => {
+        const h = Math.max(1.5, H - Y(p.v || 0)), x = X(i) - bw / 2;
+        svg += p.current
+          ? `<rect x="${x}" y="${H - h}" width="${bw}" height="${h}" fill="currentColor" fill-opacity="${i === sel ? 0.35 : 0.15}" stroke="currentColor" stroke-dasharray="3 2" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`
+          : `<rect x="${x}" y="${H - h}" width="${bw}" height="${h}" rx="1" fill="currentColor" opacity="${i === sel ? 1 : 0.45}"/>`;
+      });
+    } else if (c.avgLine) {
+      c.points.forEach((p, i) => { if (p.v != null) svg += dot(X(i), Y(p.v), 4, 'opacity="0.35"'); });
+      svg += `<path d="${path("avg")}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    } else {
+      svg += `<path d="${path("v")}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" opacity="0.85" vector-effect="non-scaling-stroke"/>`;
+      c.points.forEach((p, i) => { if (p.v != null) svg += dot(X(i), Y(p.v), 3.5); });
+    }
+    // highlighted point + its value
+    const sp = c.points[sel], sv = c.avgLine ? sp?.avg : sp?.v;
+    let tag = "";
+    if (sv != null) {
+      const fx = X(sel) / W, ty = bars ? H - Math.max(1.5, H - Y(sv)) : Y(sv);
+      if (!bars) svg += dot(X(sel), Y(sv), 9, 'class="stroke-white dark:stroke-slate-900"') + dot(X(sel), Y(sv), 6.5);
+      const shift = fx > 0.85 ? "-100%" : fx < 0.15 ? "0%" : "-50%";
+      tag = `<span class="absolute whitespace-nowrap rounded bg-white/90 px-1 font-semibold text-slate-900 dark:bg-slate-900/90 dark:text-white" style="left:${(fx * 100).toFixed(1)}%;top:${((ty / H) * 100).toFixed(1)}%;transform:translate(${shift},-135%)">${short(sv, c.unit)}${sp.current ? " so far" : ""}</span>`;
+    }
+    const top = bars ? hi : Math.max(...vals), bottom = bars ? 0 : Math.min(...vals);
+    return `<div class="relative mb-1 mt-4 h-20 select-none text-[10px] leading-none">
+      <span class="absolute left-0 -translate-y-1/2 text-slate-500" style="top:${pct(top)}">${short(top, c.unit)}</span>
+      <span class="absolute left-0 -translate-y-1/2 text-slate-500" style="top:${pct(bottom)}">${short(bottom, c.unit)}</span>
+      <div data-plot class="absolute inset-y-0 left-10 right-[4.5rem]">
+        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="absolute inset-0 h-full w-full overflow-visible">${svg}</svg>${tag}
+      </div>
+      ${c.ref != null ? `<span class="absolute right-0 w-[4.25rem] -translate-y-1/2 text-slate-500" style="top:${pct(c.ref)}">${c.refText}</span>` : ""}
+    </div>
+    <div class="ml-10 mr-[4.5rem] flex justify-between text-[10px] text-slate-500"><span>${c.from}</span><span>${c.to}</span></div>`;
+  }
+  // tap on a mini chart → nearest index with data; tapping the same one again clears
+  function pickAt(e, c, pick) {
+    const r = e.currentTarget.querySelector("[data-plot]").getBoundingClientRect(), n = c.points.length;
+    const f = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    let i = c.kind === "bars" ? Math.min(n - 1, Math.floor(f * n)) : Math.round(f * (n - 1));
+    const ok = j => c.points[j] && (c.kind === "bars" || c.points[j].v != null);
+    for (let k = 0; !ok(i) && k < n; k++) i = ok(i - k) ? i - k : ok(i + k) ? i + k : i;
+    return i === pick ? null : i;
   }
 
   return {
     DATA, APP, nights, workouts, daily, segments, first, last, dataEnd, today, METRICS, ASLEEP,
     iso, addDays, weekStart, dow, fmtDay, mean, quantile, hm, clock, fmtVal, bigVal, fmtDiff, axisFmt,
-    hex, isDark, chart, resetCharts, axis, base, tipRow, events, eventLines, api, glance,
+    hex, isDark, chart, resetCharts, axis, base, tipRow, events, eventLines, api, glance, mini, pickAt, short,
   };
 })();

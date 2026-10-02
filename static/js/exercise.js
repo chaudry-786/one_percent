@@ -13,11 +13,11 @@ OP.exercise = (() => {
     }
     return out;
   }
-  const bars = (vals, line) => {
-    const hi = Math.max(...vals, line ?? 0, 1), w = 300 / vals.length;
-    return { bars: vals.map((v, i) => ({ x: i * w + 2, w: w - 4, h: Math.max(2, (v / hi) * 42), y: 46 - Math.max(2, (v / hi) * 42), last: i === vals.length - 1 })),
-      usualY: line == null ? null : 46 - (line / hi) * 42 };
-  };
+  // weekly bars for a glance card: the last 12 weeks, the current one marked "so far"
+  const bars = (W, key, unit, ref, refText, what) => ({ kind: "bars", unit, ref, refText,
+    from: dayjs(W[0].w).format("D MMM"), to: "this week",
+    points: W.map(x => ({ v: x[key], current: x.current,
+      text: `${x.current ? "This week so far" : `Week of ${dayjs(x.w).format("D MMM")}`} · ${what(x[key])}` })) });
 
   function glanceCards(gymDays) {
     const W = weeks(13), done = W.slice(0, -1), cur = W.at(-1), last8 = done.slice(-8);
@@ -29,20 +29,21 @@ OP.exercise = (() => {
     const recent = workouts.filter(x => x.group !== "walking" && x.d > addDays(dataEnd, -28));
     const mornings = recent.filter(isMorning).length, usualMornings = mean(last8.map(x => x.mornings));
     const thisMorn = mean(W.slice(-4).map(x => x.mornings));
+    const W12 = W.slice(-12), plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
     const bestMin = Math.max(...W.filter(x => x.w.startsWith(cur.w.slice(0, 4))).map(x => x.min));
     return [
-      { key: "time", icon: "⏱️", title: "Training time", top: "border-t-blue-500", bar: "fill-blue-500", num: hm(cur.min), unit: "",
-        label: `This week so far · week of ${dayjs(cur.w).format("D MMM")}`, ...bars(W.slice(-12).map(x => x.min), usualMin),
+      { key: "time", icon: "⏱️", title: "Training time", top: "border-t-blue-500", color: "text-blue-500", num: hm(cur.min), unit: "",
+        label: `This week so far · ${dayjs(cur.w).format("ddd D MMM")} – ${fmtDay(dataEnd)}`, chart: bars(W12, "min", "dur", usualMin, `usual ${hm(usualMin)}`, hm),
         trend: cur.min >= usualMin ? { text: `✓ Past your usual week (${hm(usualMin)})`, good: true } : { text: `${hm(toGo)} to go to your usual week (${hm(usualMin)})`, good: false },
-        sub: "Bars: the last 12 weeks · line: your usual week", badge: cur.min > 0 && cur.min >= bestMin ? `Best week of ${cur.w.slice(0, 4)}` : null },
-      { key: "consistency", icon: "📅", title: "Consistency", top: "border-t-emerald-500", bar: "fill-emerald-500", num: `${hits}`, unit: `of 12 weeks`,
-        label: `weeks with ${gymDays}+ training days`, ...bars(W.slice(-12).map(x => x.days), gymDays),
+        sub: "Each bar is a week (Mon–Sun)", badge: cur.min > 0 && cur.min >= bestMin ? `Best week of ${cur.w.slice(0, 4)}` : null },
+      { key: "consistency", icon: "📅", title: "Consistency", top: "border-t-emerald-500", color: "text-emerald-500", num: `${hits}`, unit: `of 12 weeks`,
+        label: `weeks with ${gymDays}+ training days`, chart: bars(W12, "days", "count", gymDays, `target ${gymDays}`, n => plural(n, "training day")),
         trend: streak ? { text: `${streak}-week streak · never miss twice`, good: true } : { text: `This week: ${cur.days} of ${gymDays} days`, good: false },
-        sub: "Bars: training days per week · line: your target", badge: null },
-      { key: "mornings", icon: "🌅", title: "Morning sessions", top: "border-t-amber-500", bar: "fill-amber-500", num: `${mornings}`, unit: `of ${recent.length}`,
-        label: "sessions started before 12:00 · last 4 weeks", ...bars(W.slice(-12).map(x => x.mornings), usualMornings),
+        sub: "Each bar is a week: days you trained", badge: null },
+      { key: "mornings", icon: "🌅", title: "Morning sessions", top: "border-t-amber-500", color: "text-amber-500", num: `${mornings}`, unit: `of ${recent.length}`,
+        label: "sessions started before 12:00 · last 4 weeks", chart: bars(W12, "mornings", "count", usualMornings, `usual ${+usualMornings.toFixed(1)}`, n => plural(n, "morning session")),
         trend: thisMorn > usualMornings * 1.05 ? { text: "↑ More mornings than usual", good: true } : { text: `Usually ${(+usualMornings.toFixed(1))} a week`, good: false },
-        sub: "Bars: morning sessions per week", badge: null },
+        sub: "Each bar is a week: morning sessions", badge: null },
     ];
   }
 

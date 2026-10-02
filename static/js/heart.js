@@ -2,18 +2,18 @@
 OP.heart = (() => {
   const { daily, METRICS, mean, quantile, fmtVal, bigVal, hex, chart, axis, base, tipRow, glance, fmtDay, eventLines } = OP;
   const KEYS = [
-    { key: "hrv", icon: "💓", top: "border-t-pink-500", bar: "fill-pink-500", chart: "hrvChart" },
-    { key: "rhr", icon: "❤️", top: "border-t-red-500", bar: "fill-red-500", chart: "rhrChart" },
-    { key: "walkHr", icon: "🚶", top: "border-t-orange-500", bar: "fill-orange-500", chart: "walkHrChart" },
+    { key: "hrv", icon: "💓", top: "border-t-pink-500", color: "text-pink-500", chart: "hrvChart" },
+    { key: "rhr", icon: "❤️", top: "border-t-red-500", color: "text-red-500", chart: "rhrChart" },
+    { key: "walkHr", icon: "🚶", top: "border-t-orange-500", color: "text-orange-500", chart: "walkHrChart" },
   ];
 
   function glanceCards() {
     return KEYS.map(k => {
-      const M = METRICS[k.key], st = glance(daily.map(r => ({ d: r.d, v: r[k.key] })), M);
+      const M = METRICS[k.key], st = glance(daily.map(r => ({ d: r.d, v: r[k.key] })), { ...M, avgLine: true });
       if (!st) return null;
       const [num, unit] = bigVal(st.avg7, M.unit);
-      return { ...k, title: M.label, num, unit, ...st, label: `7-day average · latest ${fmtDay(st.last.d)}`,
-        sub: st.usual != null ? `Your usual: ${fmtVal(st.usual, M.unit)}${M.better < 0 ? " · lower is better" : " · higher is better"}` : "" };
+      return { ...k, title: M.label, num, unit, ...st, label: `7-day average to ${fmtDay(st.last.d)}`,
+        sub: "Dots: each day · line: 7-day average" };
     }).filter(Boolean);
   }
 
