@@ -8,7 +8,7 @@ OP.sleep = (() => {
   const GLANCE = [
     { key: "deep", icon: "🌊", top: "border-t-blue-500", color: "text-blue-500" },
     { key: "wake", icon: "☀️", top: "border-t-amber-500", color: "text-amber-500", better: -1 }, // earlier is better here
-    { key: "awakeN", icon: "👁️", top: "border-t-orange-500", color: "text-orange-500" },
+    { key: "awake", icon: "👁️", top: "border-t-orange-500", color: "text-orange-500" },
   ];
   function glanceCards(targets) {
     return GLANCE.map(g => {
@@ -167,12 +167,12 @@ OP.sleep = (() => {
       if (!long) series.push({ name: "Nights", type: "scatter", data: nightly.map(x => [x.x, x.v, x.k]), symbolSize: 6, itemStyle: { color: c, opacity: 0.45 } });
       series.push({ name: "14-day average", type: "line", data: movingAvg(nightly, 14), showSymbol: false, smooth: 0.2, lineStyle: { width: 2.5, color: c }, itemStyle: { color: c } });
     } else {
-      series.push({ name: M.label, type: "line", z: 3, showSymbol: true, symbolSize: 7, lineStyle: { width: 2, color: c, opacity: sel ? 0.3 : 1 }, itemStyle: { color: c },
+      series.push({ name: M.label, type: "line", z: 3, showSymbol: !!sel, smooth: 0.2, symbolSize: 7, lineStyle: { width: 2.5, color: c, opacity: sel ? 0.3 : 1 }, itemStyle: { color: c }, // dots only for a tapped range
         data: pts.map(x => {
           const v = [x.x, x.v, x.k];
           if (!sel) return v;
           const isSel = x.k === sel.k, inB = sel.members.has(x.k);
-          return { value: v, symbolSize: isSel ? 15 : inB ? 11 : 5, itemStyle: { color: c, opacity: inB ? 1 : 0.3, borderColor: isSel ? hex("ink") : hex("surface"), borderWidth: isSel ? 3 : 2 } };
+          return { value: v, symbolSize: isSel ? 15 : inB ? 11 : 0, itemStyle: { color: c, opacity: inB ? 1 : 0.3, borderColor: isSel ? hex("ink") : hex("surface"), borderWidth: isSel ? 3 : 2 } };
         }),
         markArea: sel ? { silent: true, itemStyle: { color: c, opacity: 0.12 }, data: [[{ yAxis: sel.lo }, { yAxis: sel.hi }]] } : undefined });
     }

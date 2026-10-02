@@ -1,42 +1,80 @@
-{# Speech: practice from Accent Coach. Time this week, the 100-hour milestone and sentences at a glance; charts below. #}
+{# Speech: one hero card (today's practice and one thing to do), the last 12 weeks, and detail charts behind "More". #}
 <section x-show="tab === 'speech'" class="grid gap-4">
   <template x-if="!OP.speech.has()">
     <p class="card hint text-center">No speech practice found yet. Practise in Accent Coach and it shows up here.</p>
   </template>
-  <div class="flex items-center justify-between gap-3">
-    <h2 class="eyebrow">At a glance</h2>
-    <a x-show="speechUrl" :href="speechUrl" target="_blank" rel="noopener" class="text-sm font-semibold text-violet-600 dark:text-violet-400">Practise now →</a>
-  </div>
-  {{ glance("speechGlance") }}
+  <div x-show="OP.speech.has()" class="rounded-2xl border p-5"
+       :class="{ done: 'border-emerald-300 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-500/10',
+                 pending: 'border-amber-300 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-500/10',
+                 behind: 'border-rose-300 bg-rose-50 dark:border-rose-500/40 dark:bg-rose-500/10' }[speechStatus.state]">
+    <p class="text-xs font-bold uppercase tracking-wider"
+       :class="{ done: 'text-emerald-600 dark:text-emerald-400', pending: 'text-amber-600 dark:text-amber-400', behind: 'text-rose-600 dark:text-rose-400' }[speechStatus.state]"
+       x-text="speechStatus.eyebrow"></p>
+    <h2 class="mt-1 text-3xl font-extrabold tracking-tight" x-text="speechStatus.title"></h2>
 
-  <h2 class="eyebrow mt-2">Explore</h2>
-  <div class="flex flex-wrap items-center gap-2">{% include "_range.html" %}</div>
+    <div class="mt-4 flex items-center gap-3">
+      <div class="h-3 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+        <div class="h-full rounded-full bg-violet-500" :style="`width:${speechStatus.progress}%`"></div>
+      </div>
+      <span class="whitespace-nowrap text-lg font-bold" x-text="`${speechStatus.now} of ${speechStatus.target} min`"></span>
+    </div>
+    <div class="mt-3 grid max-w-xs grid-cols-7 gap-1.5 text-center">
+      <template x-for="d in speechStatus.week" :key="d.d">
+        <div :title="OP.fmtDay(d.d)">
+          <div class="mx-auto h-2.5 w-2.5 rounded-full"
+               :class="d.s === 'done' ? 'bg-violet-500' : d.s === 'today' ? 'ring-2 ring-slate-400' : d.s === 'future' ? 'border border-dashed border-slate-300 dark:border-slate-600' : 'bg-slate-300 dark:bg-slate-700'"></div>
+          <span class="text-[10px] text-slate-500" x-text="d.label"></span>
+        </div>
+      </template>
+    </div>
 
-  <div class="card">
-    <h3 class="font-semibold">Daily practice</h3>
-    <p class="hint" x-text="speechDailyHint"></p>
-    <div id="speechDailyChart" class="mt-2 h-72"></div>
+    <p class="mt-3 text-lg font-semibold text-slate-800 dark:text-slate-100" x-text="speechStatus.action"></p>
+    <a x-show="speechUrl && speechStatus.state !== 'done'" :href="speechUrl" target="_blank" rel="noopener" class="btn-primary mt-3 inline-flex">Practise now →</a>
   </div>
-  <div class="grid gap-4 lg:grid-cols-2">
-    <div class="card">
-      <h3 class="font-semibold">Sentences per week</h3>
-      <p class="hint">New sentences and repeats · dashed line: 70 a week</p>
-      <div id="speechWeeklyChart" class="mt-2 h-64"></div>
+
+  <div x-show="OP.speech.has()" class="card">
+    <div class="flex items-center justify-between gap-3">
+      <h3 class="font-semibold">Last 12 weeks</h3>
+      <span class="flex items-center gap-2 text-xs font-semibold" :title="`${speechStatus.milestone} of practice`">🏁
+        <span class="inline-block h-1.5 w-16 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"><span class="block h-full rounded-full bg-fuchsia-500" :style="`width:${speechStatus.milestonePct}%`"></span></span>
+        <span x-text="speechStatus.milestone.replace(' hours', ' h')"></span></span>
     </div>
+    <p class="text-sm font-semibold"
+       :class="{ bad: 'text-rose-600 dark:text-rose-400', warn: 'text-amber-600 dark:text-amber-400', good: 'text-emerald-600 dark:text-emerald-400' }[speechStatus.trendTone]"
+       x-text="speechStatus.trendText"></p>
+    <div id="speechTrendChart" class="mt-2 h-44"></div>
+    <p class="hint" x-text="`Each bar is a week · green: ${targets.accentMin} min a day hit · amber: some · red: none`"></p>
+  </div>
+
+  <button x-show="OP.speech.has()" type="button" class="btn justify-self-start" @click="speechMoreOpen = !speechMoreOpen" x-text="(speechMoreOpen ? '▾' : '▸') + ' More detail'"></button>
+  <div x-show="speechMoreOpen" class="grid gap-4">
+    <div class="flex flex-wrap items-center gap-2">{% include "_range.html" %}</div>
     <div class="card">
-      <h3 class="font-semibold">Road to <span x-text="speechGlance[1]?.unit.replace('h of ', '') + ' hours'"></span></h3>
-      <p class="hint">All time · dots every 25 h · dotted: where your recent pace gets you</p>
-      <div id="speechRoadChart" class="mt-2 h-64"></div>
+      <h3 class="font-semibold">Daily practice</h3>
+      <p class="hint" x-text="speechDailyHint"></p>
+      <div id="speechDailyChart" class="mt-2 h-72"></div>
     </div>
-    <div class="card">
-      <h3 class="font-semibold">When you practise</h3>
-      <p class="hint">Practices by hour of the day · mornings in amber</p>
-      <div id="speechHourChart" class="mt-2 h-64"></div>
-    </div>
-    <div class="card">
-      <h3 class="font-semibold">How often you repeat a sentence</h3>
-      <p class="hint">All time · number of sentences practised once, twice, …</p>
-      <div id="speechRepeatChart" class="mt-2 h-64"></div>
+    <div class="grid gap-4 lg:grid-cols-2">
+      <div class="card">
+        <h3 class="font-semibold">Sentences per week</h3>
+        <p class="hint">New sentences and repeats · dashed line: 70 a week</p>
+        <div id="speechWeeklyChart" class="mt-2 h-64"></div>
+      </div>
+      <div class="card">
+        <h3 class="font-semibold">Road to 100 hours</h3>
+        <p class="hint">All time · dots every 25 h · dotted: where your recent pace gets you</p>
+        <div id="speechRoadChart" class="mt-2 h-64"></div>
+      </div>
+      <div class="card">
+        <h3 class="font-semibold">When you practise</h3>
+        <p class="hint">Practices by hour of the day · mornings in amber</p>
+        <div id="speechHourChart" class="mt-2 h-64"></div>
+      </div>
+      <div class="card">
+        <h3 class="font-semibold">How often you repeat a sentence</h3>
+        <p class="hint">All time · number of sentences practised once, twice, …</p>
+        <div id="speechRepeatChart" class="mt-2 h-64"></div>
+      </div>
     </div>
   </div>
 </section>

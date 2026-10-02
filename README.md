@@ -82,21 +82,15 @@ Speech practice minutes use the same estimate as Accent Coach's Analytics page, 
 
 ### Exercise
 
-Built to make a slump obvious and to make restarting easy (based on behaviour-change research: feedback on the gap to your goal, "never miss twice", the goal-gradient and fresh-start effects, and making the next step small). Walks don't count unless **Count walks** is on. "Today" is the last day in your export; if it's 3+ days old the banner says so.
+Designed to get you to act: one message, one action, one trend. Walks don't count unless **Count walks** is on (under More detail). "Today" is the last day in your export; if it's 3+ days old the card says so.
 
-- **Status banner:**
+- **Hero card:**
   - **Behind** (red): 4+ days since your last workout, or the last 4 weeks under half your normal.
   - **Slipping** (amber): last week missed the target.
-  - **On track** (green): otherwise.
-  - Each state says what it takes to get back on track this week.
-- **At a glance:**
-  - **This week:** days trained vs your target, Mon–Sun, and whether the target is still reachable.
-  - **Last 4 weeks:** training days vs your normal (the 6 months before), with the last 12 weeks coloured green (hit the target), amber (some) or red (none).
-  - **Since your last workout:** days, what it was, a 30-day strip and your longest break this year.
-- **Training days per month:** the last 18 months against about your target per month (e.g. 17 for 4 a week).
-- **Workout days:** calendar coloured by how long you trained. Small red squares mark breaks of a week or more. On a phone it shows the latest weeks that fit.
-- **Training per week:** hours by type, with your average as a dashed line.
-- **Which days** and **what time you train**: weekday and start-hour charts, mornings in amber.
+  - **On track** / **Week done** (green).
+  - It shows one ring per target day (filled as you train), this week's days, and one sentence on what to do. From Friday to Sunday, when behind, it suggests Monday as a fresh start.
+- **Last 12 weeks:** training days per week against your target. Green hit it, amber some, red none, and this week is dashed. Above it: training days in the last 4 weeks vs your normal (the 6 months before).
+- **More detail** (collapsed): date range, workout calendar (small red squares mark breaks of a week or more), what time and which days you train, and hours per week by type.
 
 There's deliberately no "training vs sleep" comparison: in your data, busy training weeks don't show better sleep or heart numbers (other things change too), so it would mislead.
 
@@ -108,17 +102,15 @@ There's deliberately no "training vs sleep" comparison: in your data, busy train
 
 ### Speech
 
-Practice from Accent Coach (read from its `progress.json`). Each practice is one sentence practised once; its time is estimated from the clip length, as on Accent Coach's Analytics page. Practice days run 07:00–07:00.
+Practice from Accent Coach (read from its `progress.json`), built the same way as Exercise: one message, one action, one trend. Each practice is one sentence practised once; its time is estimated from the clip length, as on Accent Coach's Analytics page. Practice days run 07:00–07:00.
 
-- **At a glance:**
-  - **Practice time** this week vs your usual week.
-  - **The 100-hour milestone:** progress bar, total hours by week, and when you'd reach it at your last-4-weeks pace. After 100 h it moves to the next 100.
-  - **Sentences** this week (new vs repeats) against 70 a week.
-- **Daily practice:** minutes a day split into new sentences and repeats, with your daily target and a 7-day average. Long ranges show the average day of each week.
-- **Sentences per week**, against 70 a week.
-- **Road to 100 hours:** cumulative hours (all time) with a projection.
-- **When you practise:** practices by hour of the day.
-- **How often you repeat a sentence:** sentences practised 1×, 2×, 3×, 4×, 5×+.
+- **Hero card (today):**
+  - **Done today** (green): with your streak.
+  - **Not done yet** (amber): how many minutes keep the streak.
+  - **Behind** (red): you missed yesterday too ("never miss twice").
+  - It shows a progress bar for today's minutes, this week's days, one sentence, and a **Practise now** button.
+- **Last 12 weeks:** practice per week against your daily target × 7. Green hit it, amber some, red none, and this week is dashed. Above it: time in the last 4 weeks vs your normal (the 6 months before), and progress to 100 hours.
+- **More detail** (collapsed): date range, daily practice (new vs repeats), sentences per week, road to 100 hours, when you practise, and how often you repeat a sentence.
 
 Words, the sentence lists and "bad" sentences stay on Accent Coach's Analytics page, because One Percent doesn't have the sentence text.
 

@@ -1,4 +1,4 @@
-// Speech tab: practice from Accent Coach. Glance cards (time this week, 100-hour milestone, sentences this week) and charts.
+// Speech tab: practice from Accent Coach. A hero card for today, the last 12 weeks, and detail charts behind "More".
 // Each practice is one sentence practised once; its time is estimated from the clip length (same as Accent Coach's Analytics).
 OP.speech = (() => {
   const { APP, mean, hm, hex, chart, axis, base, tipRow, addDays, weekStart, fmtDay, today } = OP;
@@ -21,10 +21,6 @@ OP.speech = (() => {
       return { w, min: ps.reduce((s, p) => s + p.min, 0), sentences: ps.length, fresh, repeat: ps.length - fresh, current: i === n - 1 };
     });
   }
-  const bars = (W, key, unit, ref, refText, what) => ({ kind: "bars", unit, ref, refText,
-    from: dayjs(W[0].w).format("D MMM"), to: "this week",
-    points: W.map(x => ({ v: x[key], current: x.current, text: `${x.current ? "This week so far" : `Week of ${dayjs(x.w).format("D MMM")}`} · ${what(x)}` })) });
-
   // 100 h, then the next 100
   function milestone() {
     const hours = P.reduce((s, p) => s + p.min, 0) / 60, goal = Math.max(100, Math.ceil((hours + 1e-9) / 100) * 100);
@@ -32,37 +28,12 @@ OP.speech = (() => {
     const eta = recent > 0 ? addDays(day, Math.ceil((goal - hours) / recent)) : null;
     return { hours, goal, recent, eta };
   }
-  const cumulativeAt = d => P.filter(p => p.d <= d).reduce((s, p) => s + p.min, 0) / 60;
-
-  function glanceCards() {
-    if (!P.length) return [];
-    const W = weeks(13), done = W.slice(0, -1).slice(-8), cur = W.at(-1), W12 = W.slice(-12);
-    const usual = mean(done.map(x => x.min)), m = milestone();
-    const last12 = W12.map(x => addDays(x.w, 6) > day ? day : addDays(x.w, 6));
-    return [
-      { key: "time", icon: "⏱️", title: "Practice time", top: "border-t-violet-500", color: "text-violet-500", num: hm(cur.min), unit: "",
-        label: `This week so far · ${dayjs(cur.w).format("ddd D MMM")} – ${fmtDay(day)}`,
-        chart: bars(W12, "min", "dur", usual, `usual ${hm(usual)}`, x => hm(x.min)),
-        trend: cur.min >= usual ? { text: `✓ Past your usual week (${hm(usual)})`, good: true } : { text: `${hm(usual - cur.min)} to go to your usual week (${hm(usual)})`, good: false },
-        sub: "Each bar is a week (Mon–Sun)", badge: null },
-      { key: "milestone", icon: "🏁", title: `${m.goal}-hour milestone`, top: "border-t-fuchsia-500", color: "text-fuchsia-500", fill: "bg-fuchsia-500",
-        num: m.hours.toFixed(1), unit: `h of ${m.goal}`, progress: Math.min(100, (m.hours / m.goal) * 100),
-        label: `${Math.round((m.hours / m.goal) * 100)}% done · ${plural(P.length, "practice")} since ${dayjs(P[0].d).format("D MMM YYYY")}`,
-        chart: { kind: "line", unit: "count", ref: null, from: dayjs(W12[0].w).format("D MMM"), to: "now",
-          points: last12.map((d, i) => { const v = cumulativeAt(d); return { v, text: `${i === 11 ? "Now" : `End of week of ${dayjs(W12[i].w).format("D MMM")}`} · ${v.toFixed(1)} h` }; }) },
-        trend: { text: m.eta ? `${(m.goal - m.hours).toFixed(1)} h to go · about ${dayjs(m.eta).format("MMM YYYY")} at your recent pace` : `${(m.goal - m.hours).toFixed(1)} h to go`, good: true },
-        sub: "Line: total hours at the end of each week", badge: null },
-      { key: "sentences", icon: "🗣️", title: "Sentences", top: "border-t-violet-500", color: "text-violet-500", num: `${cur.sentences}`, unit: "this week",
-        label: `${cur.fresh} new · ${plural(cur.repeat, "repeat")}`,
-        chart: bars(W12, "sentences", "count", WEEKLY_TARGET, `target ${WEEKLY_TARGET}`, x => `${x.sentences} sentences (${x.fresh} new)`),
-        trend: cur.sentences >= WEEKLY_TARGET ? { text: `✓ Hit the ${WEEKLY_TARGET}-a-week target`, good: true } : { text: `${WEEKLY_TARGET - cur.sentences} to go to ${WEEKLY_TARGET} this week`, good: false },
-        sub: "Each bar is a week: sentences practised", badge: null },
-    ];
-  }
 
   // ---------- charts ----------
   function render(app, range) {
     if (!P.length) return;
+    trend12(app);
+    if (!app.speechMoreOpen) return; // the detail charts live in the collapsed "More detail" section
     const ps = P.filter(p => p.d >= range[0] && p.d <= range[1]);
     daily(app, ps, range);
     weekly(ps, range);
@@ -174,5 +145,47 @@ OP.speech = (() => {
     }, true);
   }
 
-  return { glanceCards, render, has: () => P.length > 0, sentences: () => seen.size };
+  // the hero card: today's practice vs the daily target, this week's days, and one thing to do (never miss twice)
+  function status(targets) {
+    const target = targets.accentMin, mins = d => APP.accent?.[d] || 0, hit = d => mins(d) >= target;
+    const now = Math.round(mins(day)), until = dayjs().hour() < 7 ? "before 07:00" : "today";
+    const h = OP.habits.list(targets).find(x => x.id === "accent"), streak = h ? OP.habits.stats(h).streak : 0;
+    let missed = 0; // days in a row without hitting the target, before today
+    for (let d = addDays(day, -1); d >= (P[0]?.d || day) && !hit(d); d = addDays(d, -1)) missed++;
+    const mon = weekStart(day), week = Array.from({ length: 7 }, (_, i) => {
+      const d = addDays(mon, i);
+      return { d, label: "MTWTFSS"[i], s: hit(d) ? "done" : d > day ? "future" : d === day ? "today" : "miss" };
+    });
+    let state, eyebrow, title, action;
+    if (hit(day)) [state, eyebrow, title, action] = ["done", "Done today", `✓ ${now} min today`, streak > 1 ? `${streak}-day streak. See you tomorrow.` : "A new streak starts today. See you tomorrow."];
+    else if (missed >= 1) [state, eyebrow, title, action] = ["behind", "You’ve fallen behind", missed === 1 ? "You missed yesterday" : `${missed} days without practice`, `Never miss twice: practise ${target - now} min ${until}.`];
+    else [state, eyebrow, title, action] = ["pending", "Not done yet", now ? "Almost there" : "Not yet today", `${target - now} more min ${until} keeps your ${streak ? `${streak}-day ` : ""}streak.`];
+    // last 4 weeks vs normal (the 6 months before)
+    const sumMin = (a, b) => P.filter(p => p.d >= a && p.d <= b).reduce((s, p) => s + p.min, 0);
+    const last4 = sumMin(addDays(day, -27), day), normal4 = (sumMin(addDays(day, -27 - 182), addDays(day, -28)) / 26) * 4;
+    const ratio = normal4 ? last4 / normal4 : 1, m = milestone();
+    return { state, eyebrow, title, action, now, target, progress: Math.min(100, (now / target) * 100), week,
+      trendText: `${hm(last4)} in the last 4 weeks · you normally do ${hm(normal4)}`,
+      trendTone: ratio < 0.5 ? "bad" : ratio < 0.9 ? "warn" : "good",
+      milestone: `${m.hours.toFixed(1)} of ${m.goal} hours`, milestonePct: Math.min(100, (m.hours / m.goal) * 100) };
+  }
+
+  // the last 12 weeks: practice per week against the daily target × 7 (green hit, amber some, red none; this week outlined)
+  function trend12(app) {
+    const W = weeks(12), goal = app.targets.accentMin * 7, b = base();
+    chart("speechTrendChart").setOption({
+      ...b, grid: { ...b.grid, top: 16 },
+      tooltip: { ...b.tooltip, trigger: "item", formatter: x => { const w = W[x.dataIndex];
+        return `<b>${w.current ? "This week so far" : `Week of ${dayjs(w.w).format("D MMM")}`}</b><br>${hm(w.min)} · ${plural(w.sentences, "sentence")}`; } },
+      xAxis: axis({ type: "category", data: W.map(w => (w.current ? "now" : dayjs(w.w).format("D MMM"))), splitLine: { show: false }, axisLabel: { color: hex("muted"), fontSize: 10, interval: 2 } }),
+      yAxis: axis({ type: "value", interval: 60, max: v => Math.ceil(Math.max(v.max, goal * 1.1) / 60) * 60, axisLabel: { color: hex("muted"), fontSize: 11, formatter: v => `${v / 60}h` } }),
+      series: [{ type: "bar", barMaxWidth: 26,
+        data: W.map(w => ({ value: Math.max(w.min, goal * 0.02), itemStyle: w.current
+          ? { color: "transparent", borderColor: w.min >= goal ? OP.exercise.TONE.good : hex("muted"), borderWidth: 1.5, borderType: "dashed", borderRadius: [4, 4, 0, 0] }
+          : { color: w.min >= goal ? OP.exercise.TONE.good : w.min > 0 ? OP.exercise.TONE.warn : OP.exercise.TONE.bad, borderRadius: [4, 4, 0, 0] } })),
+        markLine: { symbol: "none", silent: true, data: [{ yAxis: goal, label: { formatter: `target ${hm(goal)}`, position: "insideEndTop", color: hex("ink2") }, lineStyle: { color: hex("ink2"), type: [5, 4] } }] } }],
+    }, true);
+  }
+
+  return { status, render, has: () => P.length > 0, sentences: () => seen.size };
 })();

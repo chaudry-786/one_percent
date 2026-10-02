@@ -1,110 +1,82 @@
-// Exercise tab: status banner, glance cards (this week, last 4 weeks, since your last workout) and charts. Walks are left out unless toggled on.
+// Exercise tab: a hero card (where you stand this week, one action), the last 12 weeks, and detail charts behind "More". Walks are left out unless toggled on.
 OP.exercise = (() => {
   const { workouts, mean, hm, hex, chart, axis, base, tipRow, addDays, weekStart, fmtDay, dataEnd, eventLines } = OP;
-  const isMorning = w => w.start < 720;
   const GROUPS = [["strength", "Strength"], ["running", "Running"], ["cardio", "Other cardio"], ["walking", "Walking"]];
 
-  // per ISO week: minutes, training days, morning sessions (non-walk workouts)
+  // per ISO week: minutes and training days (non-walk workouts)
   function weeks(n) {
     const cur = weekStart(dataEnd), out = [];
     for (let i = n - 1; i >= 0; i--) {
       const w = addDays(cur, -7 * i), ws = workouts.filter(x => x.group !== "walking" && x.d >= w && x.d < addDays(w, 7));
-      out.push({ w, min: ws.reduce((s, x) => s + x.dur, 0), days: new Set(ws.map(x => x.d)).size, mornings: ws.filter(isMorning).length, sessions: ws.length, current: i === 0 });
+      out.push({ w, min: ws.reduce((s, x) => s + x.dur, 0), days: new Set(ws.map(x => x.d)).size, current: i === 0 });
     }
     return out;
   }
-  // weekly bars for a glance card: the last 12 weeks, the current one marked "so far"
-  const bars = (W, key, unit, ref, refText, what) => ({ kind: "bars", unit, ref, refText,
-    from: dayjs(W[0].w).format("D MMM"), to: "this week",
-    points: W.map(x => ({ v: x[key], current: x.current,
-      text: `${x.current ? "This week so far" : `Week of ${dayjs(x.w).format("D MMM")}`} · ${what(x[key])}` })) });
 
   const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
-  const pretty = t => ({ TraditionalStrengthTraining: "Strength", FunctionalStrengthTraining: "Functional strength", HighIntensityIntervalTraining: "HIIT" })[t] || t.replace(/([a-z])([A-Z])/g, "$1 $2");
   const train = () => workouts.filter(x => x.group !== "walking");
   const trainedDays = (from, to) => new Set(train().filter(x => x.d >= from && x.d <= to).map(x => x.d));
   const TONE = { good: "#10b981", warn: "#f59e0b", bad: "#f43f5e" };
 
-  // where you stand, for the banner and the cards. "Today" is the last day in the export.
+  // where you stand, for the hero card. "Today" is the last day in the export.
   function status(gymDays) {
-    const all = train(), days = [...new Set(all.map(x => x.d))].sort(), last = days.at(-1);
+    const days = [...new Set(train().map(x => x.d))].sort(), last = days.at(-1);
     const since = last ? dayjs(dataEnd).diff(last, "day") : null;
     const last4 = trainedDays(addDays(dataEnd, -27), dataEnd).size;
     // normal: training days per 4 weeks over the 6 months before the last 4 weeks
     const normal4 = Math.round((trainedDays(addDays(dataEnd, -27 - 182), addDays(dataEnd, -28)).size / 26) * 4);
-    const cur = weeks(1)[0], prev = weeks(2)[0];
-    const daysLeft = dayjs(addDays(cur.w, 6)).diff(dataEnd, "day") + (trainedDays(dataEnd, dataEnd).size ? 0 : 1);
-    const typical = Math.round(OP.quantile(all.filter(x => x.d > addDays(dataEnd, -365)).map(x => x.dur).sort((a, b) => a - b), 0.5) || 0);
-    const weekend = OP.dow(dataEnd) >= 4; // Fri–Sun: point to Monday as a fresh start
-    let state, title, text;
-    if (since == null || since >= 4 || last4 < normal4 / 2) {
-      state = "behind";
+    const cur = weeks(1)[0], prev = weeks(2)[0], left = Math.max(0, gymDays - cur.days);
+    const week = Array.from({ length: 7 }, (_, i) => {
+      const d = addDays(cur.w, i);
+      return { d, label: "MTWTFSS"[i], s: trainedDays(d, d).size ? "done" : d > dataEnd ? "future" : d === dataEnd ? "today" : "miss" };
+    });
+    const rings = Array.from({ length: gymDays }, (_, i) => i < cur.days);
+    const byWeekend = OP.dow(dataEnd) >= 4; // Fri–Sun: Monday is a natural fresh start
+    let state, eyebrow, title, action;
+    if (cur.days >= gymDays) {
+      [state, eyebrow, title, action] = ["done", "Week done", `${cur.days} of ${gymDays} ✓ Week done`, "Anything more is a bonus."];
+    } else if (since == null || since >= 4 || last4 < normal4 / 2) {
+      [state, eyebrow] = ["behind", "You’ve fallen behind"];
       title = since == null ? "No workouts yet" : `${plural(since, "day")} since your last workout`;
-      text = `${plural(last4, "training day")} in the last 4 weeks. You normally do about ${normal4}. ` +
-        (weekend ? "Train today if you can, or make Monday your fresh start." : "Never miss twice: train today or tomorrow.") +
-        ` Even 20 minutes counts; your typical session is ${typical} min.`;
+      action = byWeekend ? "Train today, or make Monday your fresh start." : "Train today to get back on track.";
     } else if (prev.days < gymDays) {
-      state = "slipping";
-      title = `Last week: ${prev.days} of ${gymDays} days`;
-      text = `Get back to ${gymDays} this week: ${plural(Math.max(0, gymDays - cur.days), "more day")} by Sunday.`;
+      [state, eyebrow, title, action] = ["slipping", "Slipping", `Last week: ${prev.days} of ${gymDays} days`, `${plural(left, "more day")} by Sunday.`];
     } else {
-      state = "ontrack";
-      title = cur.days >= gymDays ? `${cur.days} of ${gymDays} days this week ✓` : `${cur.days} of ${gymDays} days this week`;
-      text = cur.days >= gymDays ? "Target hit. Anything more is a bonus." : `${plural(gymDays - cur.days, "more day")} by Sunday keeps you on track.`;
+      [state, eyebrow, title, action] = ["ontrack", "On track", `${cur.days} of ${gymDays} days this week`, `${plural(left, "more day")} by Sunday.`];
     }
-    return { state, title, text, since, last, last4, normal4, cur, daysLeft,
+    const ratio = normal4 ? last4 / normal4 : 1;
+    return { state, eyebrow, title, action, rings, week, done: cur.days, gymDays, last4, normal4,
+      trendText: `${plural(last4, "training day")} in the last 4 weeks · you normally do ${normal4}`,
+      trendTone: ratio < 0.5 ? "bad" : ratio < 0.9 ? "warn" : "good",
       stale: dayjs(OP.today).diff(dataEnd, "day") >= 3 ? `Based on your export up to ${fmtDay(dataEnd)}. Upload a new one for today's picture.` : "" };
   }
 
-  function glanceCards(gymDays) {
-    const S = status(gymDays), W12 = weeks(12), cur = S.cur, needed = gymDays - cur.days;
-    const toneOf = x => (x.current ? null : x.days >= gymDays ? "good" : x.days > 0 ? "warn" : "bad");
-    // this week, Mon–Sun
-    const week = Array.from({ length: 7 }, (_, i) => {
-      const d = addDays(cur.w, i), done = trainedDays(d, d).size > 0;
-      return { d, label: "MTWTFSS"[i], s: done ? "done" : d > dataEnd ? "future" : d === dataEnd ? "today" : "miss" };
-    });
-    // the last 30 days
-    const month = Array.from({ length: 30 }, (_, i) => { const d = addDays(dataEnd, i - 29); return { d, s: trainedDays(d, d).size ? "done" : "miss" }; });
-    // longest break this year
-    const yearDays = [...trainedDays(`${dataEnd.slice(0, 4)}-01-01`, dataEnd)].sort();
-    let gap = null;
-    for (let i = 1; i < yearDays.length; i++) { const g = dayjs(yearDays[i]).diff(yearDays[i - 1], "day"); if (!gap || g > gap.n) gap = { n: g, from: yearDays[i - 1], to: yearDays[i] }; }
-    if (S.since != null && (!gap || S.since > gap.n)) gap = { n: S.since, from: S.last, to: null };
-    const gaps = yearDays.slice(1).map((d, i) => dayjs(d).diff(yearDays[i], "day")).sort((a, b) => a - b);
-    const lastW = train().filter(x => x.d === S.last), drop = S.normal4 ? Math.round((1 - S.last4 / S.normal4) * 100) : 0;
-    const ratio = S.normal4 ? S.last4 / S.normal4 : 1;
-    return [
-      { key: "week", icon: "📅", title: "This week", top: "border-t-emerald-500", color: "text-emerald-500", num: `${cur.days} of ${gymDays}`, unit: "days",
-        tone: needed > 0 && needed > S.daysLeft ? "bad" : needed > 0 ? "warn" : null,
-        label: `Week of ${dayjs(cur.w).format("ddd D MMM")} · up to ${fmtDay(dataEnd)}`, strip: week,
-        trend: needed <= 0 ? { text: "✓ Target hit this week", good: true }
-          : needed > S.daysLeft ? { text: `${plural(S.daysLeft, "day")} left: the most you can still get is ${cur.days + S.daysLeft}`, tone: "bad" }
-          : { text: `${plural(needed, "more day")} needed · ${plural(S.daysLeft, "day")} left`, tone: "warn" },
-        sub: "Green: trained · outlined: latest day in your data", badge: null },
-      { key: "last4", icon: "📉", title: "Last 4 weeks", top: "border-t-blue-500", color: "text-blue-500", num: `${S.last4}`, unit: S.last4 === 1 ? "training day" : "training days",
-        tone: ratio < 0.5 ? "bad" : ratio < 0.9 ? "warn" : null,
-        label: `You normally do about ${S.normal4} in 4 weeks`,
-        chart: { ...bars(W12, "days", "count", gymDays, `target ${gymDays}`, x => plural(x.days, "training day")) },
-        trend: ratio >= 0.9 ? { text: "✓ At or above your normal", good: true } : { text: `↓ ${drop}% below your normal`, tone: ratio < 0.5 ? "bad" : "warn" },
-        sub: "Each bar is a week: green hit the target, amber some, red none", badge: null },
-      { key: "since", icon: "⏳", title: "Since your last workout", top: "border-t-rose-500", color: "text-rose-500",
-        num: S.since == null ? "–" : S.since === 0 ? "Today" : `${S.since}`, unit: S.since > 0 ? (S.since === 1 ? "day" : "days") : "",
-        tone: S.since >= 4 ? "bad" : S.since >= 2 ? "warn" : null,
-        label: lastW.length ? `Last: ${fmtDay(S.last)} · ${lastW.map(x => `${pretty(x.type)} ${hm(x.dur)}`).join(", ")}` : "No workouts yet", strip: month,
-        trend: gap ? { text: `Longest break this year: ${gap.n} days (${dayjs(gap.from).format("D MMM")} – ${gap.to ? dayjs(gap.to).format("D MMM") : "now"})`, tone: S.since >= 4 ? "bad" : null } : { text: "", good: false },
-        sub: `The last 30 days · ${!gaps.length ? "" : gaps[Math.floor(gaps.length / 2)] <= 1 ? "you usually train on back-to-back days" : `you usually train every ${gaps[Math.floor(gaps.length / 2)]} days`}`, badge: null },
-    ].map(g => (g.chart ? { ...g, chart: { ...g.chart, points: g.chart.points.map((p, i) => ({ ...p, tone: toneOf(W12[i]) })) } } : g));
+  // the last 12 weeks: training days per week against the target (green hit, amber some, red none; this week outlined)
+  function trend12(app) {
+    const W = weeks(12), g = app.targets.gymDays, b = base();
+    chart("exTrendChart").setOption({
+      ...b, grid: { ...b.grid, top: 16 },
+      tooltip: { ...b.tooltip, trigger: "item", formatter: x => { const w = W[x.dataIndex];
+        return `<b>${w.current ? "This week so far" : `Week of ${dayjs(w.w).format("D MMM")}`}</b><br>${plural(w.days, "day")} · ${hm(w.min)}`; } },
+      xAxis: axis({ type: "category", data: W.map(w => (w.current ? "now" : dayjs(w.w).format("D MMM"))), splitLine: { show: false }, axisLabel: { color: hex("muted"), fontSize: 10, interval: 2 } }),
+      yAxis: axis({ type: "value", minInterval: 1, max: v => Math.max(v.max, g + 1) }),
+      series: [{ type: "bar", barMaxWidth: 26,
+        data: W.map(w => ({ value: Math.max(w.days, 0.08), itemStyle: w.current
+          ? { color: "transparent", borderColor: w.days >= g ? TONE.good : hex("muted"), borderWidth: 1.5, borderType: "dashed", borderRadius: [4, 4, 0, 0] }
+          : { color: w.days >= g ? TONE.good : w.days > 0 ? TONE.warn : TONE.bad, borderRadius: [4, 4, 0, 0] } })),
+        markLine: { symbol: "none", silent: true, data: [{ yAxis: g, label: { formatter: `target ${g}`, position: "insideEndTop", color: hex("ink2") }, lineStyle: { color: hex("ink2"), type: [5, 4] } }] } }],
+    }, true);
   }
 
   // ---------- charts ----------
   function render(app, range) {
     const ws = workouts.filter(w => (app.walks || w.group !== "walking") && w.d >= range[0] && w.d <= range[1]);
+    trend12(app);
+    if (!app.exMoreOpen) return; // the detail charts live in the collapsed "More detail" section
     calendar(ws, range);
     weekly(app, ws, range);
     timeOfDay(ws);
     weekdays(ws);
-    monthly(app);
   }
 
   // days inside breaks of 7+ days without training (including a break that's still going): [day, break length]
@@ -209,22 +181,5 @@ OP.exercise = (() => {
     }, true);
   }
 
-  // training days per month, last 18 months, against the target (gymDays a week ≈ per month)
-  function monthly(app) {
-    const months = Array.from({ length: 18 }, (_, i) => dayjs(dataEnd).subtract(17 - i, "month").format("YYYY-MM"));
-    const counts = months.map(m => new Set(train().filter(x => x.d.startsWith(m)).map(x => x.d)).size);
-    const target = Math.round((app.targets.gymDays * 365.25) / 12 / 7), cur = months.at(-1), b = base();
-    chart("exMonthChart").setOption({
-      ...b, tooltip: { ...b.tooltip, trigger: "item", formatter: x => `<b>${dayjs(months[x.dataIndex] + "-01").format("MMMM YYYY")}${months[x.dataIndex] === cur ? " (so far)" : ""}</b><br>${plural(x.value, "training day")} · target about ${target}` },
-      xAxis: axis({ type: "category", data: months.map(m => dayjs(m + "-01").format("MMM YY")), splitLine: { show: false } }),
-      yAxis: axis({ type: "value", minInterval: 1, max: v => Math.max(v.max, target + 2) }),
-      series: [{ type: "bar", barMaxWidth: 28,
-        data: counts.map((v, i) => ({ value: v, itemStyle: { borderRadius: [4, 4, 0, 0],
-          color: months[i] === cur ? hex("muted") : v >= target ? TONE.good : v >= target / 2 ? TONE.warn : TONE.bad, opacity: months[i] === cur ? 0.6 : 0.9 } })),
-        label: { show: true, position: "top", color: hex("ink2"), fontSize: 10 },
-        markLine: { symbol: "none", silent: true, data: [{ yAxis: target, label: { show: false }, lineStyle: { color: hex("ink2"), type: [5, 4] } }] } }], // the hint names the target
-    }, true);
-  }
-
-  return { glanceCards, status, render, TONE };
+  return { status, render, TONE };
 })();

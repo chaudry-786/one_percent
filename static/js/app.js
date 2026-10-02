@@ -7,7 +7,7 @@ document.addEventListener("alpine:init", () => {
     metric: "deep", range: "1y", from: "", to: "", group: "week", dow: [0, 1, 2, 3, 4, 5, 6],
     selPeriod: null, selection: null, skipTap: false, night: OP.last, moreOpen: false,
     // exercise / heart
-    walks: false, exWeeklyHint: "", hrvRange: "", bucketHint: "", bucketInfo: null, speechDailyHint: "", speechUrl: OP.APP.accentUrl || "",
+    walks: false, exMoreOpen: false, speechMoreOpen: false, exWeeklyHint: "", hrvRange: "", bucketHint: "", bucketInfo: null, speechDailyHint: "", speechUrl: OP.APP.accentUrl || "",
     // sheets
     optionsOpen: false, targetsOpen: false,
     targets: { ...OP.habits.DEFAULTS, ...(OP.APP.habits || {}) }, draft: {},
@@ -18,8 +18,7 @@ document.addEventListener("alpine:init", () => {
 
     get sleepGlance() { return OP.sleep.glanceCards(this.targets); },
     get habitCards() { return OP.habits.cards(this.targets); },
-    get speechGlance() { return OP.speech.glanceCards(); },
-    get exGlance() { return OP.exercise.glanceCards(this.targets.gymDays); },
+    get speechStatus() { return OP.speech.status(this.targets); },
     get exStatus() { return OP.exercise.status(this.targets.gymDays); },
     get compare() { return this.cmpEvent ? OP.sleep.compare(this.cmpEvent) : null; },
     get bounds() {
@@ -50,7 +49,7 @@ document.addEventListener("alpine:init", () => {
       this.$watch("tab", t => history.replaceState(null, "", t === "habits" ? location.pathname : `#${t}`));
       addEventListener("hashchange", () => { this.tab = fromHash(); });
       for (const k of ["metric", "group", "range", "from", "to"]) this.$watch(k, () => { this.selPeriod = null; });
-      for (const k of ["tab", "metric", "range", "from", "to", "group", "dow", "selPeriod", "night", "moreOpen", "walks", "events", "targets"]) this.$watch(k, () => this.render());
+      for (const k of ["tab", "metric", "range", "from", "to", "group", "dow", "selPeriod", "night", "moreOpen", "exMoreOpen", "speechMoreOpen", "walks", "events", "targets"]) this.$watch(k, () => this.render());
       this.render();
     },
     applyTheme() { document.documentElement.classList.toggle("dark", this.dark); },

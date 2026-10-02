@@ -1,53 +1,72 @@
-{# Exercise: a status banner (behind / slipping / on track, with a next step), cards for this week, the last 4 weeks and the
-   time since your last workout, then charts. #}
+{# Exercise: one hero card (where you stand this week and one thing to do), the last 12 weeks, and detail charts behind "More". #}
 <section x-show="tab === 'exercise'" class="grid gap-4">
-  <div class="rounded-2xl border p-4 sm:p-5"
+  <div class="rounded-2xl border p-5"
        :class="{ behind: 'border-rose-300 bg-rose-50 dark:border-rose-500/40 dark:bg-rose-500/10',
                  slipping: 'border-amber-300 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-500/10',
-                 ontrack: 'border-emerald-300 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-500/10' }[exStatus.state]">
+                 ontrack: 'border-emerald-300 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-500/10',
+                 done: 'border-emerald-300 bg-emerald-50 dark:border-emerald-500/40 dark:bg-emerald-500/10' }[exStatus.state]">
     <p class="text-xs font-bold uppercase tracking-wider"
-       :class="{ behind: 'text-rose-600 dark:text-rose-400', slipping: 'text-amber-600 dark:text-amber-400', ontrack: 'text-emerald-600 dark:text-emerald-400' }[exStatus.state]"
-       x-text="{ behind: 'You’ve fallen behind', slipping: 'Slipping', ontrack: 'On track' }[exStatus.state]"></p>
-    <h2 class="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl" x-text="exStatus.title"></h2>
-    <p class="mt-2 text-slate-700 dark:text-slate-200" x-text="exStatus.text"></p>
+       :class="exStatus.state === 'behind' ? 'text-rose-600 dark:text-rose-400' : exStatus.state === 'slipping' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'"
+       x-text="exStatus.eyebrow"></p>
+    <h2 class="mt-1 text-3xl font-extrabold tracking-tight" x-text="exStatus.title"></h2>
+
+    <div class="mt-5 flex items-center gap-3">
+      <template x-for="(on, i) in exStatus.rings" :key="i">
+        <span class="h-9 w-9 rounded-full border-4" :class="on ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300 dark:border-slate-600'"></span>
+      </template>
+      <span class="ml-1 text-lg font-bold" x-text="`${exStatus.done} of ${exStatus.gymDays}`"></span>
+      <span class="text-sm text-slate-500">this week</span>
+    </div>
+    <div class="mt-3 grid max-w-xs grid-cols-7 gap-1.5 text-center">
+      <template x-for="d in exStatus.week" :key="d.d">
+        <div :title="OP.fmtDay(d.d)">
+          <div class="mx-auto h-2.5 w-2.5 rounded-full"
+               :class="d.s === 'done' ? 'bg-emerald-500' : d.s === 'today' ? 'ring-2 ring-slate-400' : d.s === 'future' ? 'border border-dashed border-slate-300 dark:border-slate-600' : 'bg-slate-300 dark:bg-slate-700'"></div>
+          <span class="text-[10px] text-slate-500" x-text="d.label"></span>
+        </div>
+      </template>
+    </div>
+
+    <p class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-100" x-text="exStatus.action"></p>
     <p x-show="exStatus.stale" class="mt-2 text-xs text-slate-500" x-text="exStatus.stale"></p>
   </div>
 
-  <h2 class="eyebrow mt-2">At a glance <span class="font-normal normal-case tracking-normal">· walks not counted</span></h2>
-  {{ glance("exGlance") }}
-
   <div class="card">
-    <h3 class="font-semibold">Training days per month</h3>
-    <p class="hint" x-text="`Last 18 months · dashed line: about ${Math.round(targets.gymDays * 365.25 / 12 / 7)} a month (${targets.gymDays} a week) · green hit it, amber half or more, red under half`"></p>
-    <div id="exMonthChart" class="mt-2 h-64"></div>
-  </div>
-
-  <h2 class="eyebrow mt-2">Explore</h2>
-  <div class="flex flex-wrap items-center gap-2">
-    {% include "_range.html" %}
-    <button type="button" class="chip" :aria-pressed="walks" @click="walks = !walks">Count walks</button>
+    <h3 class="font-semibold">Last 12 weeks</h3>
+    <p class="text-sm font-semibold"
+       :class="{ bad: 'text-rose-600 dark:text-rose-400', warn: 'text-amber-600 dark:text-amber-400', good: 'text-emerald-600 dark:text-emerald-400' }[exStatus.trendTone]"
+       x-text="exStatus.trendText"></p>
+    <div id="exTrendChart" class="mt-2 h-44"></div>
+    <p class="hint">Training days each week · green: hit your target · amber: some · red: none · dashed: this week so far. Walks not counted.</p>
   </div>
 
-  <div class="card">
-    <h3 class="font-semibold">Workout days</h3>
-    <p class="hint">Each square is a day; the colour shows how long you trained. Small red squares mark breaks of a week or more. Tap for details.</p>
-    <div id="exCalChart" class="mt-2"></div>
-  </div>
-  <div class="card">
-    <h3 class="font-semibold">Training per week</h3>
-    <p class="hint" x-text="exWeeklyHint"></p>
-    <div id="exWeeklyChart" class="mt-2 h-72"></div>
-  </div>
-  <div class="grid gap-4 lg:grid-cols-2">
-    <div class="card">
-      <h3 class="font-semibold">Which days you train</h3>
-      <p class="hint">Training days by weekday</p>
-      <div id="exDowChart" class="mt-2 h-64"></div>
+  <button type="button" class="btn justify-self-start" @click="exMoreOpen = !exMoreOpen" x-text="(exMoreOpen ? '▾' : '▸') + ' More detail'"></button>
+  <div x-show="exMoreOpen" class="grid gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      {% include "_range.html" %}
+      <button type="button" class="chip" :aria-pressed="walks" @click="walks = !walks">Count walks</button>
     </div>
     <div class="card">
-      <h3 class="font-semibold">What time you train</h3>
-      <p class="hint">Workouts by start hour · morning sessions in amber</p>
-      <div id="exTimeChart" class="mt-2 h-64"></div>
+      <h3 class="font-semibold">Workout days</h3>
+      <p class="hint">Each square is a day; the colour shows how long you trained. Small red squares mark breaks of a week or more. Tap for details.</p>
+      <div id="exCalChart" class="mt-2"></div>
+    </div>
+    <div class="grid gap-4 lg:grid-cols-2">
+      <div class="card">
+        <h3 class="font-semibold">What time you train</h3>
+        <p class="hint">Workouts by start hour · morning sessions in amber</p>
+        <div id="exTimeChart" class="mt-2 h-64"></div>
+      </div>
+      <div class="card">
+        <h3 class="font-semibold">Which days you train</h3>
+        <p class="hint">Training days by weekday</p>
+        <div id="exDowChart" class="mt-2 h-64"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="font-semibold">Hours per week by type</h3>
+      <p class="hint" x-text="exWeeklyHint"></p>
+      <div id="exWeeklyChart" class="mt-2 h-72"></div>
     </div>
   </div>
 </section>

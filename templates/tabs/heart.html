@@ -1,5 +1,10 @@
 {# Heart: HRV (all day), resting and walking heart rate at a glance; trends below. #}
 <section x-show="tab === 'heart'" class="grid gap-4">
+  <div x-show="!OP.daily.length" class="card text-center">
+    <p class="font-semibold">No heart data in this upload yet</p>
+    <p class="hint mt-1">It was processed before heart data was added. Upload your Health export again (⇪ Upload export) and HRV, resting and walking heart rate will appear here.</p>
+  </div>
+  <div x-show="OP.daily.length" class="grid gap-4">
   <h2 class="eyebrow">At a glance</h2>
   {{ glance("heartGlance") }}
 
@@ -14,5 +19,6 @@
   <div class="grid gap-4 lg:grid-cols-2">
     <div class="card"><h3 class="font-semibold">Resting heart rate</h3><p class="hint">Lower is usually better.</p><div id="rhrChart" class="mt-2 h-64"></div></div>
     <div class="card"><h3 class="font-semibold">Walking heart rate</h3><p class="hint">Average while walking. Drops as fitness improves.</p><div id="walkHrChart" class="mt-2 h-64"></div></div>
+  </div>
   </div>
 </section>
