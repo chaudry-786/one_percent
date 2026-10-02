@@ -61,15 +61,25 @@ The page has four tabs. The date range, Options (which nights, events) and the "
 
 ### Habits
 
-- **Headline:** your strongest habit for the outcome you pick (Total sleep, Deep, REM, HRV or Resting HR).
-- **Four habit cards**, ranked by effect, each comparing your nights with vs without the habit:
-  - in bed by 23:00 (change the target via the Sleep tab: pick Bedtime, then Options → Goal)
-  - workout days vs rest days
-  - morning (before 12:00) vs evening (17:00+) workouts
-  - 30+ Apple exercise minutes
+Four habits, each judged against a fixed target. There are no comparisons, just how you're doing:
 
-  Cards need 8+ nights on each side; "small sample" means under 20.
-- **Habit tracker:** the last 4 weeks of the range for "in bed by 23:00", workout days and 7h+ asleep, with streaks.
+| Habit | Done when | Counted on |
+|---|---|---|
+| Wake up early | up by 07:15 | the morning you wake |
+| Sleep well | 45 min+ deep **and** 7 h+ asleep | the morning you wake |
+| Train | any workout except walks, **4 days a week** | each week (Mon–Sun) |
+| Accent practice | 15+ min of practice, read from Accent Coach's saved history | each day |
+
+Each card shows:
+- **The current streak**, using *Atomic Habits*' "never miss twice" rule: one missed day (or week) is forgiven, two in a row end the streak.
+- **Your best streak.**
+- **Today's status.**
+- **A 5-week chain:** coloured means done, grey means not done, hatched means no data.
+- **Your total "votes"** (every day the habit was done).
+
+A different *Atomic Habits* quote appears each day. Change the targets with **Targets**; they're saved on the server, so every device uses them.
+
+Accent minutes use the same estimate as Accent Coach's Analytics page, based on each practised clip's length. On Cloud Run, the app reads `progress.json` from Accent Coach's bucket (read-only). Locally, set `ACCENT_PROGRESS_FILE` to a copy of it.
 
 ### Sleep
 

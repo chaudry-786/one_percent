@@ -219,34 +219,44 @@ body:not([data-tab="sleep"]) .sleep-only { display: none !important; }
 .toolbar .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
 
 /* ---------- habits ---------- */
-.hero { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px 24px; align-items: center; }
-.hero .headline { font-size: 18px; line-height: 1.45; max-width: 760px; }
-.hero .headline b { font-weight: 650; }
-.hero .sub { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
-.habit-grid { grid-column: span 12; display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-@media (max-width: 1000px) { .habit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 600px) { .habit-grid { grid-template-columns: 1fr; } }
-.habit { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; }
-.habit .h-title { font-weight: 620; font-size: 14.5px; }
-.habit .h-desc { display: block; color: var(--muted); font-size: 12.5px; font-weight: 400; margin-top: 1px; }
-.habit .h-effect { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin-top: 10px; }
-.habit .h-effect.good { color: var(--good); } .habit .h-effect.bad { color: var(--bad); } .habit .h-effect.flat { color: var(--ink-2); }
-.habit .h-what { color: var(--ink-2); font-size: 13px; }
-.habit .h-detail { color: var(--ink-2); font-size: 12.5px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
-.habit .h-freq { color: var(--muted); font-size: 12px; margin-top: 2px; }
-.habit.dim { opacity: .55; }
-.tracker-wrap { overflow-x: auto; }
-.tracker { display: grid; grid-template-columns: 170px repeat(28, minmax(14px, 1fr)) 170px; gap: 5px 3px; align-items: center; min-width: 760px; }
-.tk-label { font-size: 13px; padding-right: 8px; }
-.tk-streak { font-size: 12px; color: var(--ink-2); padding-left: 12px; white-space: nowrap; }
-.tk-streak b { color: var(--ink); }
-.tk-cell { height: 22px; border-radius: 5px; background: var(--surface-2); }
-.tk-cell.on { background: var(--accent); }
-.tk-cell.na { background: transparent; box-shadow: inset 0 0 0 1px var(--border); }
-.tk-day { font-size: 10px; color: var(--muted); text-align: center; }
-.tk-day.wk { color: var(--ink-2); font-weight: 600; }
-.legend-row { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-top: 10px; flex-wrap: wrap; }
-.legend-row i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 5px; }
+:root { --h-wake: #eda100; --h-sleep: #4a3aa7; --h-gym: #1baf7a; --h-accent: #eb6834; }
+:root[data-theme="dark"] { --h-wake: #c98500; --h-sleep: #9085e9; --h-gym: #199e70; --h-accent: #d95926; }
+body[data-tab="habits"] .controls { display: none; }
+.habits-hero { grid-column: span 12; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 16px; padding: 4px 2px 0; }
+.habits-hero .quote { font-size: 17px; line-height: 1.45; max-width: 640px; color: var(--ink); }
+.habits-hero .quote small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.habit-cards { grid-column: span 12; display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 860px) { .habit-cards { grid-template-columns: 1fr; } }
+.habit-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px 16px 14px; display: grid; gap: 12px;
+  border-top: 3px solid var(--hc); }
+.hc-head { display: flex; align-items: center; gap: 12px; }
+.hc-icon { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 19px; flex: none;
+  background: color-mix(in srgb, var(--hc) 18%, transparent); }
+.hc-head h3 { margin: 0; font-size: 16px; font-weight: 650; }
+.hc-target { color: var(--muted); font-size: 12.5px; }
+.hc-main { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.hc-streak b { font-size: 40px; line-height: 1; font-weight: 750; letter-spacing: -0.03em; color: var(--ink); }
+.hc-streak span { margin-left: 6px; color: var(--ink-2); font-size: 13.5px; }
+.hc-streak .best { display: block; margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.hc-streak .fresh { font-size: 20px; font-weight: 650; color: var(--ink); }
+.hc-today { text-align: right; font-size: 13px; color: var(--ink-2); max-width: 60%; }
+.hc-today b { color: var(--ink); font-weight: 600; }
+.hc-today .tick { color: var(--hc); font-weight: 700; }
+.hc-today a { color: var(--hc); font-weight: 600; text-decoration: none; display: inline-block; margin-top: 2px; }
+.hc-chain { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)) auto; gap: 5px; align-items: center; max-width: 340px; }
+.hc-chain .dl { font-size: 10px; color: var(--muted); text-align: center; }
+.hc-cell { aspect-ratio: 1; border-radius: 7px; max-height: 34px; }
+.hc-cell.done { background: var(--hc); }
+.hc-cell.miss { background: var(--surface-2); }
+.hc-cell.unknown { box-shadow: inset 0 0 0 1px var(--border); background: repeating-linear-gradient(135deg, transparent 0 4px, var(--surface-2) 4px 5px); }
+.hc-cell.pending { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--hc) 55%, transparent); }
+.hc-cell.today { outline: 2px solid var(--ink-2); outline-offset: 1px; }
+.hc-wk { font-size: 11px; color: var(--muted); padding-left: 4px; min-width: 34px; text-align: right; }
+.hc-wk.hit { color: var(--hc); font-weight: 700; }
+.hc-foot { font-size: 12.5px; color: var(--ink-2); border-top: 1px solid var(--border); padding-top: 10px; }
+.hc-foot b { color: var(--ink); }
+.ht-sheet .su-sheet label { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 10px 0; font-size: 14px; }
+.ht-sheet input { width: 110px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--ink); padding: 0 10px; font-size: 15px; }
 
 /* ---------- layout ---------- */
 main { max-width: 1440px; margin: 0 auto; padding: 18px 24px 48px; display: grid; gap: 16px; grid-template-columns: repeat(12, minmax(0, 1fr)); }
@@ -295,7 +305,16 @@ footer { max-width: 1440px; margin: 0 auto; padding: 0 24px 32px; color: var(--m
 
 @media (max-width: 640px) {
   header.top, .controls-inner, main, footer { padding-left: 16px; padding-right: 16px; }
+  header.top { padding-top: 14px; gap: 10px; }
+  header.top .brand { width: 100%; gap: 10px; }
+  header.top h1 { font-size: 20px; }
+  .tabs { width: 100%; }
+  .tabs button { flex: 1; padding: 8px 4px; font-size: 13.5px; }
+  header.top > .row { width: 100%; }
+  header.top > .row .icon-btn { flex: 1; justify-content: center; height: 34px; font-size: 13px; padding: 0 8px; }
+  #copyLink { display: none; }
   .controls { position: static; }
+  main { gap: 12px; padding-top: 12px; }
   .chart { height: 300px; } .chart.tall { height: 340px; }
 }
 </style>
@@ -379,24 +398,11 @@ footer { max-width: 1440px; margin: 0 auto; padding: 0 24px 32px; color: var(--m
 
 <!-- ============ HABITS ============ -->
 <main class="tab" data-tab="habits">
-  <section class="card span-12 hero">
-    <div>
-      <div class="headline" id="habitHeadline"></div>
-      <div class="sub">From your own nights in the selected range. They're links, not proof, but they're <i>your</i> links.</div>
-    </div>
-    <div class="row">
-      <span class="lbl" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600">Measure by</span>
-      <div class="seg" id="habitOutcome"></div>
-    </div>
+  <section class="habits-hero">
+    <div class="quote" id="habitQuote"></div>
+    <button type="button" class="icon-btn" id="habitTargetsBtn" hidden>Targets</button>
   </section>
-  <section class="habit-grid" id="habitCards"></section>
-  <section class="card span-12">
-    <div class="card-head">
-      <div><h2>Habit tracker</h2><div class="hint" id="trackerHint"></div></div>
-    </div>
-    <div class="tracker-wrap"><div class="tracker" id="tracker"></div></div>
-    <div class="legend-row"><span><i style="background:var(--accent)"></i>Done</span><span><i style="background:var(--surface-2)"></i>Not done</span><span><i style="box-shadow:inset 0 0 0 1px var(--border)"></i>No data</span></div>
-  </section>
+  <section class="habit-cards" id="habitCards"></section>
 </main>
 
 <!-- ============ EXERCISE ============ -->
@@ -432,7 +438,6 @@ footer { max-width: 1440px; margin: 0 auto; padding: 0 24px 32px; color: var(--m
   <section class="card span-7">
     <div class="card-head">
       <div><h2>Overnight HRV</h2><div class="hint">While asleep. Higher usually means better recovery. Your normal range: <b id="hrvChartRange" style="color:var(--ink)"></b></div></div>
-      <button type="button" class="link-btn" id="hrvHabitsLink">What raises my HRV? →</button>
     </div>
     <div id="hrvChart" class="chart"></div>
   </section>
@@ -1953,86 +1958,190 @@ function miniTrend(id, key, nights, { mas = [7, 30], band = false } = {}) {
 }
 
 /* ======================= Habits tab ======================= */
-function habitDefs(target) {
-  const wk = n => n.wN > 0;
-  return [
-    { title: `In bed by ${clock(target)}`, desc: "vs later nights", A: n => n.bed <= target, B: n => n.bed > target, track: n => n.bed <= target },
-    { title: "Workout days", desc: "vs rest days", A: wk, B: n => n.wN === 0, track: wk },
-    { title: "Morning workouts", desc: "vs evening workouts (17:00+)", A: n => n.wTiming === "morning", B: n => n.wTiming === "evening" },
-    { title: "30+ exercise minutes", desc: "Apple exercise minutes that day, vs fewer", A: n => n.exMin >= 30, B: n => n.exMin < 30 },
-  ];
-}
-function renderHabits(nights) {
-  const key = state.outcome, target = goalOf("bed") ?? 660;
-  outcomeSeg("habitOutcome");
+// Four habits, judged on fixed targets (editable via "Targets" in the web app). No comparisons: just how you're doing.
+// Streaks follow Atomic Habits' "never miss twice": one missed day is forgiven, two in a row end the streak.
+const HABIT_DEFAULTS = { wakeBy: "07:15", deepMin: 45, asleepMin: 420, gymDays: 4, accentMin: 15 };
+let habitTargets = { ...HABIT_DEFAULTS, ...(APP.habits || {}) };
+const QUOTES = [
+  "You do not rise to the level of your goals. You fall to the level of your systems.",
+  "Every action you take is a vote for the type of person you wish to become.",
+  "Getting 1% better every day counts for a lot in the long run.",
+  "Missing once is an accident. Missing twice is the start of a new habit.",
+  "Habits are the compound interest of self-improvement.",
+];
+const addDaysIso = (iso, n) => isoDate(new Date(iso + "T12:00:00").getTime() + n * DAY);
+const dowIso = iso => (new Date(iso + "T12:00:00").getDay() + 6) % 7;
+const weekStartIso = iso => addDaysIso(iso, -dowIso(iso));
+const prettyWorkout = type => ({ TraditionalStrengthTraining: "Strength", FunctionalStrengthTraining: "Functional strength", HighIntensityIntervalTraining: "HIIT" }[type]
+  || type.replace(/([a-z])([A-Z])/g, "$1 $2"));
 
-  const m = METRICS[key];
-  const cards = withUnit(key, () => habitDefs(target).map(h => {
-    const a = nights.filter(h.A), b = nights.filter(h.B);
-    const va = vals(a, key), vb = vals(b, key);
-    const ma = mean(va), mb = mean(vb);
-    const enough = va.length >= 8 && vb.length >= 8;
-    const ch = enough ? change(ma, mb, key) : null;
-    const rel = enough && mb ? (ma - mb) / Math.abs(mb) : 0;
-    return { h, ch, enough, score: enough ? (m.better || 1) * rel : -Infinity, ma, mb, na: va.length, nb: vb.length, freq: nights.length ? a.length / nights.length : 0 };
-  }));
-  cards.sort((x, y) => y.score - x.score);
-
-  const best = cards.find(c => c.enough && c.ch && c.ch.cls === "good");
-  document.getElementById("habitHeadline").innerHTML = best
-    ? `Your strongest habit for <b>${OUTCOME_WORD[key]}</b>: <b>${best.h.title.toLowerCase()}</b>, worth <span class="delta good">${best.ch.html.replace(/^[▲▼] /, "")}</span>${best.freq < 0.5 ? `. You did it on ${Math.round(best.freq * 100)}% of nights, so there's room to do it more.` : ". Keep it up."}`
-    : `No habit stands out for <b>${OUTCOME_WORD[key]}</b> in this range yet. Try a longer date range.`;
-
-  document.getElementById("habitCards").replaceChildren(...cards.map(c => withUnit(key, () => {
-    const d = el("div", { className: "habit" + (c.enough ? "" : " dim") });
-    d.innerHTML = `<div class="h-title">${c.h.title}<span class="h-desc">${c.h.desc}</span></div>` +
-      (c.enough
-        ? `<div class="h-effect ${c.ch.cls}">${c.ch.html.replace(/^[▲▼■] /, "")}</div><div class="h-what">${OUTCOME_WORD[key]}</div>
-           <div class="h-detail">${fmt(c.ma, key)} vs ${fmt(c.mb, key)} · ${c.na} vs ${c.nb} nights</div>
-           <div class="h-freq">You did this on ${Math.round(c.freq * 100)}% of nights${Math.min(c.na, c.nb) < 20 ? " · small sample" : ""}</div>`
-        : `<div class="h-effect flat" style="font-size:16px;margin-top:14px">Not enough nights yet</div><div class="h-freq">${c.na} vs ${c.nb} nights (need 8+ each)</div>`);
-    return d;
-  })));
-  renderTracker(nights, target);
-}
-function renderTracker(nights, target) {
-  const last = Math.min(viewBounds()[1] - DAY / 2, LAST); // a local-noon timestamp, so its ISO date is the right day
-  const days = Array.from({ length: 28 }, (_, i) => isoDate(last - (27 - i) * DAY));
-  const rows = [
-    ...habitDefs(target).filter(h => h.track).map(h => ({ label: h.title, done: h.track })),
-    { label: "7h+ asleep", done: n => n.total >= 420 },
-  ];
-  document.getElementById("trackerHint").textContent = `${fmtDay(days[0])} – ${fmtDay(days[27])}. Streaks count back from the latest night.`;
-  const cells = [el("div")];
-  for (const d of days) {
-    const dt = new Date(d + "T12:00:00"), dow = (dt.getDay() + 6) % 7;
-    cells.push(el("div", { className: "tk-day" + (dow === 0 ? " wk" : ""), textContent: dow === 0 ? dt.getDate() : DOW[dow][0], title: fmtDay(d) }));
+function habitList() {
+  const t = habitTargets;
+  const [wh, wm] = t.wakeBy.split(":").map(Number);
+  const wakeTarget = wh * 60 + wm;
+  const wake = new Map(), sleep = new Map(), gym = new Map(), accent = new Map();
+  for (const n of NIGHTS) {
+    const morning = addDaysIso(n.d, 1); // wake-up and sleep count on the day you wake
+    wake.set(morning, { done: n.wake - 720 <= wakeTarget, text: `up at ${clock(n.wake)}` });
+    sleep.set(morning, { done: n.deep >= t.deepMin && n.total >= t.asleepMin, text: `${hm(n.total)} asleep · ${Math.round(n.deep)}m deep` });
   }
-  cells.push(el("div"));
-  const inRange = new Set(nights.map(n => n.d));
-  for (const r of rows) {
-    cells.push(el("div", { className: "tk-label", textContent: r.label }));
-    let streak = 0, counting = true;
-    const states = days.map(d => {
-      const n = inRange.has(d) ? NIGHTS[BY_DATE.get(d)] : null;
-      return n ? !!r.done(n) : null;
-    });
-    for (let i = states.length - 1; i >= 0; i--) {
-      if (states[i] === null && i === states.length - 1) continue; // tonight not recorded yet
-      if (states[i] && counting) streak++; else counting = false;
+  for (const w of WORKOUTS) {
+    if (w.group === "walking") continue; // any workout except walks
+    const g = gym.get(w.d) || { done: true, min: 0, types: new Set() };
+    g.min += w.dur;
+    g.types.add(prettyWorkout(w.type));
+    g.text = `${hm(g.min)} · ${[...g.types].join(", ")}`;
+    gym.set(w.d, g);
+  }
+  for (const [d, m] of Object.entries(APP.accent || {})) accent.set(d, { done: m >= t.accentMin, text: `${Math.round(m)} min practice`, min: m });
+
+  const dataEnd = addDaysIso(NIGHTS[NIGHTS.length - 1].d, 1);
+  const firstOf = map => [...map.keys()].sort()[0];
+  const list = [
+    { id: "wake", name: "Wake up early", icon: "☀️", target: `Up by ${t.wakeBy}`, who: "an early riser", map: wake, gaps: "unknown", asOf: dataEnd, start: firstOf(wake) },
+    { id: "sleep", name: "Sleep well", icon: "🌙", target: `${t.deepMin}m+ deep and ${hm(t.asleepMin)}+ asleep`, who: "someone who sleeps well", map: sleep, gaps: "unknown", asOf: dataEnd, start: firstOf(sleep) },
+    { id: "gym", name: "Train", icon: "🏋️", target: `${t.gymDays} days a week · any workout but walks`, who: "an athlete", map: gym, gaps: "miss", asOf: dataEnd, start: firstOf(gym), weekly: t.gymDays },
+  ];
+  if (APP.accent) list.push({ id: "accent", name: "Accent practice", icon: "🗣️", target: `${t.accentMin}+ min a day`, who: "a confident speaker", map: accent, gaps: "miss",
+    asOf: APP.today || isoDate(Date.now()), start: firstOf(accent), live: true });
+  return list.filter(h => h.start);
+}
+
+function dayStatus(h, d) {
+  if (d > h.asOf || d < h.start) return "none";
+  const r = h.map.get(d);
+  if (h.live && d === h.asOf && !(r && r.done)) return "pending"; // today isn't over yet
+  if (r) return r.done ? "done" : "miss";
+  return h.gaps === "unknown" ? "unknown" : "miss";
+}
+
+// "never miss twice": count done units walking back; a single miss is forgiven, two in a row end the run
+function runFrom(statuses) {
+  let count = 0, misses = 0;
+  for (const s of statuses) {
+    if (s === "done") { count++; misses = 0; }
+    else if (s === "miss") { if (++misses >= 2) break; }
+  }
+  return count;
+}
+function bestRun(statuses) {
+  let best = 0, count = 0, misses = 0;
+  for (const s of statuses) {
+    if (s === "done") { count++; misses = 0; best = Math.max(best, count); }
+    else if (s === "miss" && ++misses >= 2) { count = 0; }
+  }
+  return best;
+}
+
+function habitStats(h) {
+  const days = [];
+  for (let d = h.start; d <= h.asOf; d = addDaysIso(d, 1)) days.push([d, dayStatus(h, d)]);
+  const votes = days.filter(([, s]) => s === "done").length;
+  if (h.weekly) {
+    // weeks Mon–Sun; the current week only counts once the target is met
+    const weeks = new Map();
+    for (const [d, s] of days) { const w = weekStartIso(d); weeks.set(w, (weeks.get(w) || 0) + (s === "done" ? 1 : 0)); }
+    const current = weekStartIso(h.asOf);
+    const ws = [...weeks].map(([w, n]) => [w, n >= h.weekly ? "done" : w === current ? "pending" : "miss", n]);
+    const back = ws.map(x => x[1]).reverse();
+    const last8 = ws.filter(x => x[1] !== "pending").slice(-8);
+    return { votes, streak: runFrom(back), best: bestRun(ws.map(x => x[1])), unit: "week", weeks: new Map(ws.map(x => [x[0], x[2]])),
+      recent: `${last8.filter(x => x[1] === "done").length} of the last ${last8.length} weeks`, thisWeek: weeks.get(current) || 0 };
+  }
+  const recent = days.slice(-28).filter(([, s]) => s === "done" || s === "miss");
+  return { votes, streak: runFrom(days.map(x => x[1]).reverse()), best: bestRun(days.map(x => x[1])), unit: "day",
+    recent: `${recent.filter(([, s]) => s === "done").length} of the last ${recent.length} days` };
+}
+
+function todayLine(h, st) {
+  const label = h.asOf === (APP.today || isoDate(Date.now())) ? "Today" : `Latest · ${new Date(h.asOf + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}`;
+  const tick = '<span class="tick">✓</span>';
+  if (h.weekly) return `This week · <b>${st.thisWeek} of ${h.weekly}</b> days${st.thisWeek >= h.weekly ? " " + tick : ""}`;
+  const r = h.map.get(h.asOf);
+  if (h.id === "accent") {
+    const m = r ? Math.round(r.min) : 0;
+    if (r && r.done) return `${label} · <b>${m} min</b> ${tick}`;
+    const link = APP.accentUrl ? `<br><a href="${APP.accentUrl}" target="_blank" rel="noopener">Practise now →</a>` : "";
+    return `${label} · <b>${m} of ${habitTargets.accentMin} min</b>${link}`;
+  }
+  if (!r) return `${label} · no data`;
+  return `${label} · <b>${r.text}</b>${r.done ? " " + tick : ""}`;
+}
+
+function habitCard(h) {
+  const st = habitStats(h);
+  const d = el("article", { className: "habit-card" });
+  d.style.setProperty("--hc", `var(--h-${h.id})`);
+  const streakHtml = st.streak
+    ? `<b>${st.streak}</b><span>${st.unit}${st.streak === 1 ? "" : "s"} in a row</span>`
+    : `<span class="fresh">Start a new streak ${h.weekly ? "this week" : "today"}</span>`;
+  // last 5 weeks, Monday-first; today outlined
+  const end = h.asOf, firstMon = addDaysIso(weekStartIso(end), -28);
+  let chain = "", today = APP.today || isoDate(Date.now());
+  for (const l of ["M", "T", "W", "T", "F", "S", "S"]) chain += `<div class="dl">${l}</div>`;
+  chain += `<div></div>`;
+  for (let w = 0; w < 5; w++) {
+    const mon = addDaysIso(firstMon, w * 7);
+    for (let i = 0; i < 7; i++) {
+      const day = addDaysIso(mon, i), s = dayStatus(h, day), r = h.map.get(day);
+      const tip = `${fmtDay(day)}${r ? ": " + r.text : s === "unknown" ? ": no data" : s === "miss" ? ": not done" : ""}`;
+      chain += `<div class="hc-cell ${s}${day === today ? " today" : ""}" title="${tip}"></div>`;
     }
-    let best = 0, run = 0;
-    for (const n of nights) { run = r.done(n) ? run + 1 : 0; best = Math.max(best, run); }
-    days.forEach((d, i) => {
-      const s = states[i];
-      cells.push(el("div", { className: "tk-cell" + (s === null ? " na" : s ? " on" : ""), title: `${fmtDay(d)}: ${s === null ? "no data" : s ? "done" : "not done"}` }));
-    });
-    const hit = states.filter(s => s).length, rec = states.filter(s => s !== null).length;
-    const st = el("div", { className: "tk-streak" });
-    st.innerHTML = `${streak ? `<b>${streak}</b>-night streak` : "No streak yet"} · best ${best}<br>${hit} of ${rec} nights`;
-    cells.push(st);
+    if (h.weekly) { const n = st.weeks.get(mon) || 0; chain += `<div class="hc-wk${n >= h.weekly ? " hit" : ""}">${mon <= end ? `${n}/${h.weekly}` : ""}</div>`; }
+    else chain += `<div></div>`;
   }
-  document.getElementById("tracker").replaceChildren(...cells);
+  d.innerHTML = `
+    <div class="hc-head"><div class="hc-icon" aria-hidden="true">${h.icon}</div>
+      <div><h3>${h.name}</h3><div class="hc-target">${h.target}</div></div></div>
+    <div class="hc-main">
+      <div class="hc-streak">${streakHtml}${st.best > st.streak ? `<span class="best">Best: ${st.best} ${st.unit}s</span>` : ""}</div>
+      <div class="hc-today">${todayLine(h, st)}</div>
+    </div>
+    <div class="hc-chain">${chain}</div>
+    <div class="hc-foot">${st.recent} · <b>${st.votes}</b> votes for becoming ${h.who}</div>`;
+  return d;
+}
+
+function renderHabits() {
+  const q = QUOTES[Math.floor(Date.now() / DAY) % QUOTES.length]; // a new one each day
+  document.getElementById("habitQuote").innerHTML = `“${q}”<small>One missed day is fine. Never miss twice.</small>`;
+  const tb = document.getElementById("habitTargetsBtn");
+  tb.hidden = !APP.webapp;
+  tb.onclick = openTargets;
+  document.getElementById("habitCards").replaceChildren(...habitList().map(habitCard));
+}
+
+function openTargets() {
+  const t = habitTargets;
+  const wrap = el("div", { className: "su-backdrop ht-sheet" });
+  wrap.innerHTML = `<form class="su-sheet" style="background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:16px;padding:20px;max-width:400px;width:100%">
+    <h2 style="margin:0 0 4px;font-size:18px">Targets</h2>
+    <div style="color:var(--muted);font-size:13px">Raise them a little when they start to feel easy.</div>
+    <label>Wake up by <input name="wakeBy" type="time" value="${t.wakeBy}" required></label>
+    <label>Deep sleep (min) <input name="deepMin" type="number" min="0" max="300" value="${t.deepMin}"></label>
+    <label>Time asleep (hours) <input name="asleepH" type="number" min="0" max="15" step="0.25" value="${t.asleepMin / 60}"></label>
+    <label>Workout days a week <input name="gymDays" type="number" min="1" max="7" value="${t.gymDays}"></label>
+    <label>Accent practice (min) <input name="accentMin" type="number" min="1" max="240" value="${t.accentMin}"></label>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button type="button" class="icon-btn" data-close>Cancel</button><button type="submit" class="icon-btn" style="background:var(--accent);color:#fff;border-color:transparent">Save</button></div>
+  </form>`;
+  wrap.style.cssText = "position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px";
+  document.body.append(wrap);
+  const close = () => wrap.remove();
+  wrap.querySelector("[data-close]").onclick = close;
+  wrap.addEventListener("click", e => { if (e.target === wrap) close(); });
+  wrap.querySelector("form").onsubmit = async e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const habits = { wakeBy: f.get("wakeBy"), deepMin: +f.get("deepMin"), asleepMin: Math.round(+f.get("asleepH") * 60), gymDays: +f.get("gymDays"), accentMin: +f.get("accentMin") };
+    try {
+      const r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ habits }) });
+      if (!r.ok) throw new Error();
+      habitTargets = { ...HABIT_DEFAULTS, ...(await r.json()).habits };
+      close();
+      renderHabits();
+    } catch { alert("Couldn't save targets. Check your connection and try again."); }
+  };
 }
 
 /* ======================= Exercise tab ======================= */
@@ -2200,7 +2309,6 @@ function renderHeart(nights) {
   miniTrend("hrvChart", "hrv", nights, { band: "hint", mas: [14] });
   miniTrend("rhrChart", "rhr", nights, { mas: [14] });
 }
-document.getElementById("hrvHabitsLink").onclick = () => { state.tab = "habits"; state.outcome = "hrv"; update(); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
 /* ======================= tabs ======================= */
 const TABS = [["habits", "Habits"], ["sleep", "Sleep"], ["exercise", "Exercise"], ["heart", "Heart"]];

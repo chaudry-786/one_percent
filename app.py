@@ -12,6 +12,7 @@ Run locally:  venv/bin/flask --app app run --debug
 
 import json
 import logging
+from collections import defaultdict
 import os
 import re
 import sys
@@ -32,6 +33,12 @@ EMPTY_PAGE = (HERE / "templates" / "empty.html").read_text(encoding="utf-8")
 SOURCE = os.environ.get("HEALTH_SOURCE", DEFAULT_SOURCE)
 # Cloud Run runs in UTC; show times as you'd read them at home
 TZ = ZoneInfo(os.environ.get("APP_TIMEZONE", "Europe/London"))
+# Accent Coach saves its practice history in its own bucket; we only read it (see infra apps.tf).
+ACCENT_BUCKET = os.environ.get("ACCENT_BUCKET")
+ACCENT_PROGRESS_FILE = os.environ.get("ACCENT_PROGRESS_FILE")  # local development: a copy of progress.json
+ACCENT_URL = os.environ.get("ACCENT_URL", "")
+# what counts as "done" for each habit; editable on the Habits tab (stored in data/settings.json)
+DEFAULT_HABITS = {"wakeBy": "07:15", "deepMin": 45, "asleepMin": 420, "gymDays": 4, "accentMin": 15}
 UPLOAD_RE = re.compile(r"^uploads/export-\d{8}-\d{6}\.zip$")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", handlers=[logging.StreamHandler(sys.stdout)])
@@ -117,13 +124,55 @@ def load_events():
     return events
 
 
+def accent_session_seconds(sentence_id):
+    """Same estimate as Accent Coach's Analytics page: listen, practise, shadow and loop a clip of this length."""
+    _, start, end = sentence_id.split("|")
+    dur = max(0.1, float(end) - float(start))
+    practice = 5 * (dur + (dur + 1) + (dur + 1))
+    return 10 * dur + practice + 10 * (dur + (dur + 1)) + 30 * dur + practice
+
+
+def accent_minutes():
+    """Estimated accent practice minutes per day (Europe/London), from Accent Coach's progress.json."""
+    raw = None
+    try:
+        if ACCENT_BUCKET:
+            from google.cloud import storage
+
+            blob = storage.Client().bucket(ACCENT_BUCKET).blob("progress.json")
+            raw = blob.download_as_bytes() if blob.exists() else None
+        elif ACCENT_PROGRESS_FILE and os.path.exists(ACCENT_PROGRESS_FILE):
+            raw = Path(ACCENT_PROGRESS_FILE).read_bytes()
+    except Exception:
+        log.exception("couldn't read accent progress")
+    if not raw:
+        return None
+    minutes = defaultdict(float)
+    for sid, stamps in (json.loads(raw).get("history") or {}).items():
+        try:
+            secs = accent_session_seconds(sid)
+        except (ValueError, TypeError):
+            continue
+        for ts in stamps:
+            minutes[datetime.fromtimestamp(ts / 1000, TZ).date().isoformat()] += secs / 60
+    return {d: round(m, 1) for d, m in sorted(minutes.items())}
+
+
+def load_habits():
+    return {**DEFAULT_HABITS, **read_json("data/settings.json", {}).get("habits", {})}
+
+
 @app.get("/")
 def index():
     payload = read_json("data/latest.json")
     if not payload:
         return EMPTY_PAGE
     payload["events"] = []  # events come from data/events.json so edits don't need re-processing
-    config = {"webapp": True, "events": load_events(), "meta": read_json("data/meta.json", {})}
+    config = {
+        "webapp": True, "events": load_events(), "meta": read_json("data/meta.json", {}),
+        "habits": load_habits(), "accent": accent_minutes(), "accentUrl": ACCENT_URL,
+        "today": datetime.now(TZ).date().isoformat(),
+    }
     return render_html(TEMPLATE, payload, config)
 
 
@@ -188,3 +237,21 @@ def events():
             clean.append({"date": date, "label": label})
     write_json("data/events.json", clean)
     return {"events": clean}
+
+
+@app.route("/api/settings", methods=["GET", "POST"])
+def settings():
+    if request.method == "GET":
+        return {"habits": load_habits()}
+    given = (request.get_json(silent=True) or {}).get("habits") or {}
+    habits = load_habits()
+    if re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", str(given.get("wakeBy", ""))):
+        habits["wakeBy"] = given["wakeBy"]
+    for key, lo, hi in (("deepMin", 0, 300), ("asleepMin", 0, 900), ("gymDays", 1, 7), ("accentMin", 1, 240)):
+        try:
+            if key in given:
+                habits[key] = max(lo, min(hi, int(given[key])))
+        except (TypeError, ValueError):
+            pass
+    write_json("data/settings.json", {"habits": habits})
+    return {"habits": habits}
