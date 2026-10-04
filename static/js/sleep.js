@@ -306,7 +306,7 @@ OP.sleep = (() => {
   }
 
   // ---------- before & after an event (e.g. "New mattress") ----------
-  const CMP = ["total", "deep", "rem", "awakeN", "eff", "hrv", "rhr"];
+  const CMP = ["total", "deep", "rem", "awakeN", "awake", "hrv", "rhr"];
   function compare(date) {
     const ev = OP.events.list.find(e => e.date === date);
     if (!ev || date <= nights[0].d || date > dataEnd) return null;
